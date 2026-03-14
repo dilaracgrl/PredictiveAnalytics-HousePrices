@@ -1,0 +1,147 @@
+# Group Coursework — Benchmarking Agentic LLM Tools for Data Science
+
+Comparing **Claude**, **Codex**, and **Antigravity** on four pipeline tasks using a shared dataset, shared scoring scripts, and structured per-agent workspaces.
+
+---
+
+## Team Tool Mapping
+
+
+| Team member         | Agent folder          | Tool               |
+| ------------------- | --------------------- | ------------------ |
+| *Dilara*            | `agents/claude/`      | Claude (claude.ai) |
+| *Muriel, Armaan*    | `agents/codex/`       | Codex (ChatGPT)    |
+| *Rachana, Caroline* | `agents/antigravity/` | Antigravity        |
+
+
+---
+
+## Folder Structure
+
+```
+group-coursework/
+├── data/
+│   ├── raw/                              ← Original dataset — NEVER MODIFIED
+│   └── processed/                        ← Cleaned version, written once then frozen
+│
+├── tasks/
+│   ├── task_01_data_ingestion/
+│   │   ├── README.md                     ← Task spec: objective, inputs, outputs, rubric
+│   │   ├── evaluate.py                   ← Shared scoring script (same for all agents)
+│   │   └── notebook_template.ipynb       ← Starter notebook for this step
+│   ├── task_02_eda/
+│   ├── task_03_baseline_model/
+│   └── task_04_improving_performance/
+│
+├── agents/
+│   ├── claude/
+│   │   ├── task_01/outputs/              ← Agent outputs go here
+│   │   ├── task_02/outputs/
+│   │   ├── task_03/outputs/
+│   │   ├── task_04/outputs/
+│   │   ├── logs/                         ← Prompt logs, screenshots, raw responses
+│   │   └── notes.md                      ← Reflection: what worked, what failed
+│   ├── codex/                            ← Same structure
+│   └── antigravity/                      ← Same structure
+│
+├── results/
+│   ├── scores.csv                        ← Auto-filled by evaluate.py
+│   └── figures/                          ← Comparison charts for the report
+│
+├── report/
+│   ├── draft.md
+│   └── references.bib
+│
+├── playbook.md                           ← Best-practice checklist
+├── CONTRIBUTING.md                       ← Rules — read before touching anything
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Quickstart
+
+### 1. Clone and install
+
+```bash
+git clone <repo-url>
+cd group-coursework
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Place the raw dataset
+
+```bash
+# Download via Kaggle API or copy manually — then never touch it again
+cp /path/to/dataset.csv data/raw/
+```
+
+### 3. Create your branch
+
+```bash
+git checkout -b <your_name>/claude/task_01
+```
+
+### 4. Do the task
+
+Open the notebook template: `tasks/task_01_data_ingestion/notebook_template.ipynb`
+Read the task spec: `tasks/task_01_data_ingestion/README.md`
+Save all outputs to `agents/claude/task_01/outputs/`.
+
+### 5. Score your work
+
+```bash
+python tasks/task_01_data_ingestion/evaluate.py \
+  --agent agents/claude/task_01/ \
+  --name <your_name> \
+  --tool "Claude (claude.ai)" \
+  --time 25 \
+  --notes "clean output, 2 iterations" \
+  --failure "none"
+```
+
+### 6. Commit and push
+
+```bash
+git add agents/claude/task_01/ results/scores.csv
+git commit -m "<name>: task_01 claude — score 4/5"
+git push -u origin <your_name>/claude/task_01
+```
+
+### 7. Open a PR into `main`
+
+Tag a teammate to review. Only merge your own agent folder.
+
+---
+
+## Golden Rules
+
+1. `**data/raw/` is immutable** — never edit it.
+2. **Never touch another agent's folder** — `agents/<tool>/` belongs to its owner.
+3. **Every task must go through `evaluate.py`** — no hand-editing `scores.csv`.
+4. `**SEED = 42` everywhere** — every notebook, every script.
+5. **Relative paths only** — no hardcoded absolute paths.
+6. **Clear notebook outputs before committing** — Kernel > Restart & Clear Output.
+7. **Branch naming: `<name>/<agent>/<task>`** — e.g. `<name>/claude/task_01`.
+
+Full rules: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Scoring
+
+Each task is worth 5 points. `evaluate.py` runs automated checks then prompts for manual ones. Results accumulate in `results/scores.csv`.
+
+
+| Task                            | Automated checks                                                                               | Manual checks                             |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Task 01 — Data Ingestion        | `ingested.csv` present, no missing values, `schema_log.md` present, missingness report present | Assumptions documented                    |
+| Task 02 — EDA                   | Notebook present, cells cleared, ≥3 plot files, `eda_summary.md` present                       | No test-set leakage; insights written     |
+| Task 03 — Baseline Model        | Output files present, `baseline_results.csv` valid, no absolute paths                          | No data leakage in preprocessing          |
+| Task 04 — Improving Performance | `improved_results.csv` with comparison, report present                                         | Improvement is meaningful; no new leakage |
+
+
+Max total per agent: **20 points**.
