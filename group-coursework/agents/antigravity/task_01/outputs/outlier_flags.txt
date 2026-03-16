@@ -1,0 +1,3 @@
+minimum_nights: 14 rows > 365 days
+price: 11 rows with 0 or negative price (non-sensical)
+price: 20 rows > $5000 per night
