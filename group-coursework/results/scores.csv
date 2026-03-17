@@ -9,3 +9,6 @@ moham,Codex,task_02_eda,5,25.0,eda complete,none
 caroline,Antigravity,task_02_eda,4,20.0,3 plots eda_summary written -- notebook outputs not cleared,notebook outputs not cleared
 caroline,Antigravity,task_03_baseline_model,5,30.0,ridge regression RMSE 115.18,test-only metrics on first run
 caroline,Antigravity,task_04_improving_performance,4,35.0,histgradientboost targetencoder RMSE 106.07 -- no failed approaches documented,improvement_report documents only successful strategy
+moham,Codex,task_02_eda,4,25.0,task_02_codex_eval,none
+moham,Codex,task_04_improving_performance,5,40.0,task_04_codex_eval,none
+moham,Codex,task_03_baseline_model,5,30.0,task_03_codex_eval,none
