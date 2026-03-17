@@ -11,7 +11,7 @@
 **What the agent helped with:**
 Antigravity correctly identified and handled the dominant missingness pattern
 in the dataset without prompting. The 20.56% missingness in `last_review` and
-`reviews_per_month` was recognised as structurally linked — both columns are
+`reviews_per_month` was recognised as structurally linked both columns are
 missing for the same 10,052 listings that have never received a review. Rather
 than defaulting to row deletion (which would have introduced ~20% response
 bias and discarded structurally informative data), the agent applied semantic
@@ -21,18 +21,18 @@ missing-by-mechanism versus missing-at-random. The agent also correctly produced
 all three required output files (`ingested.csv`, `schema_log.md`,
 `missingness_report.md`) in the correct output directory using relative paths.
 An additional `outlier_flags.txt` was generated proactively, flagging
-`minimum_nights > 365`, `price <= 0`, and `price > 5000` without removing rows —
+`minimum_nights > 365`, `price <= 0`, and `price > 5000` without removing rows
 correctly deferring removal decisions to post-EDA stages to avoid premature
 target-based filtering.
 
 **What it failed at:**
 The agent did not perform the train/test split before computing missingness
-statistics. In Task 01 this is technically correct — ingestion operates on
-the full dataset — but the agent did not make this boundary explicit in its
+statistics. In Task 01 this is technically correct ingestion operates on
+the full dataset but the agent did not make this boundary explicit in its
 documentation, which created ambiguity about when the split would occur.
 The `schema_log.md` also lacked min/max/cardinality columns that would have
 strengthened the schema audit. The prompt required one correction to force
-relative path usage — the agent's first draft used a hardcoded path.
+relative path usage the agent's first draft used a hardcoded path.
 
 **Iterations needed:**
 2 — first prompt produced an absolute path (`C:\Users\...`); second prompt
@@ -51,7 +51,7 @@ Do not split train/test — that happens in Task 02.
 ```
 
 **How I verified the output:**
-Ran `evaluate.py` — scored 5/5 in 15 minutes. Manually inspected
+Ran `evaluate.py` scored 5/5 in 15 minutes. Manually inspected
 `missingness_report.md` to confirm all four missing columns were addressed
 with written justification. Verified `ingested.csv` had zero null values
 using `df.isnull().sum().sum() == 0`.
@@ -64,7 +64,7 @@ using `df.isnull().sum().sum() == 0`.
 Antigravity produced a substantive `eda_summary.md` that went beyond plot
 descriptions to make modelling-relevant observations. Key findings included:
 (1) the `price` distribution is severely right-skewed, requiring `log1p`
-transformation for stable regression — this insight was carried forward
+transformation for stable regression this insight was carried forward
 correctly into Task 03; (2) continuous numeric features (`minimum_nights`,
 `availability_365`) exhibit weak linear correlation with price, which correctly
 predicted that a linear baseline would underperform; (3) `room_type` and
@@ -79,7 +79,7 @@ a decision it justified with reference to the EDA distribution plots.
 **What it failed at:**
 The agent did not explicitly assert that all EDA was computed on the training
 split only. The `eda_cleaned.csv` output suggests some preprocessing was
-applied during EDA — this required manual verification to confirm no test
+applied during EDA this required manual verification to confirm no test
 data had been used. The written insights were strong but lacked quantitative
 backing in places (e.g., "remarkably weak linear correlations" was not
 accompanied by the actual Pearson r values from the heatmap).
@@ -109,7 +109,7 @@ the split preceded the first `value_counts()` call.
 
 **What the agent helped with:**
 Antigravity implemented a Ridge Regression baseline with a
-`TransformedTargetRegressor` wrapper applying `log1p` to the target — a
+`TransformedTargetRegressor` wrapper applying `log1p` to the target a
 methodologically sound decision informed directly by the Task 02 EDA finding
 about price skewness. The full sklearn `Pipeline` architecture correctly
 encapsulated the `ColumnTransformer` (StandardScaler on numerics,
@@ -119,10 +119,10 @@ encoder were fitted exclusively on `X_train` with no data leakage to
 split, preprocessing decisions, and model limitations. Results: RMSE=115.18,
 MAE=56.34, R²=0.236. The agent correctly identified in the limitations section
 that Ridge's additive linear assumptions would fail to capture hyper-local
-spatial interactions — directly motivating the Task 04 approach.
+spatial interactions directly motivating the Task 04 approach.
 
 **What it failed at:**
-The baseline only reported metrics on the test set — train and validation
+The baseline only reported metrics on the test set train and validation
 metrics were not reported separately, making it impossible to assess whether
 the model was overfitting. This is a gap in the evaluation harness. The
 `baseline_results.csv` used `metric_name, value` columns rather than the
@@ -138,7 +138,7 @@ split evaluation. Second prompt requested metrics per split explicitly.
 ```
 Build a Ridge Regression baseline on ingested.csv. Split 80/20 SEED=42.
 Use TransformedTargetRegressor with log1p on the target.
-Fit all preprocessing inside a Pipeline on train only — never the full dataset.
+Fit all preprocessing inside a Pipeline on train only never the full dataset.
 Report RMSE, MAE, R² on train, val, and test splits separately.
 Save to outputs/baseline_results.csv with columns: metric_name, value.
 Save model as outputs/model.pkl. Write baseline_report.md. SEED=42 throughout.
@@ -160,12 +160,12 @@ and introduced `TargetEncoder` for the high-cardinality `neighbourhood` column,
 which had been explicitly excluded from the baseline due to cardinality concerns.
 The key distinction-level decision was the leakage handling: sklearn's
 `TargetEncoder` applies cross-validation smoothing internally during `fit()`,
-preventing test-set target values from informing the training-set encoding —
+preventing test-set target values from informing the training-set encoding
 a subtle leakage pattern that many implementations get wrong. The agent
 documented this explicitly in the leakage check section of `improvement_report.md`.
 Results: RMSE improved from 115.18 → 106.07 (-7.91%), MAE from 56.34 → 50.59
 (-10.21%), R² from 0.236 → 0.352 (+49.2% relative). The improvement is
-meaningful — a ~$9 reduction in typical prediction error is practically
+meaningful a ~$9 reduction in typical prediction error is practically
 significant for Airbnb pricing decisions and well above the noise threshold.
 
 **What it failed at:**
@@ -174,7 +174,7 @@ baseline_value, improved_value, delta_pct`) compared to the baseline CSV
 (`metric_name, value`). While the delta_pct column is informative, the
 schema inconsistency means the two files cannot be joined directly for
 the comparative analysis table. The agent also did not document any
-approaches that failed — only the successful strategy is described. A
+approaches that failed only the successful strategy is described. A
 distinction-level report requires evidence of what was tried and rejected,
 not just what worked.
 
@@ -185,7 +185,7 @@ No leakage was detected on inspection.
 **The prompt that worked best:**
 ```
 Improve on the Task 03 Ridge baseline. Use HistGradientBoostingRegressor.
-Apply TargetEncoder to the neighbourhood column — inside the Pipeline
+Apply TargetEncoder to the neighbourhood column inside the Pipeline
 to prevent leakage. Keep SEED=42. Show baseline vs improved metrics
 side by side. Save improved_model.pkl and improvement_report.md explaining
 what was tried, what worked, and confirming no leakage was introduced.
@@ -222,14 +222,14 @@ Inspected the leakage check section of `improvement_report.md`.
   `improved_results.csv` use different column structures, breaking
   cross-task joins. A schema-consistent agent would be more valuable in
   production pipelines.
-- Did not document failed approaches in Task 04 — only reported the
+- Did not document failed approaches in Task 04 only reported the
   successful strategy. For a benchmarking study this is a significant gap:
   failure evidence is more diagnostic than success evidence.
-- Required explicit relative path constraints — the first draft of Task 01
+- Required explicit relative path constraints the first draft of Task 01
   used an absolute path, which would have broken reproducibility on any
   other machine.
 - Train/val/test split evaluation was incomplete in Task 03 on the first
-  attempt — only test metrics were reported, obscuring the overfitting picture.
+  attempt only test metrics were reported, obscuring the overfitting picture.
 
 **Would I use it again for DS work?**
 Yes, conditionally. Antigravity is well-suited to structured data science
