@@ -1,4 +1,4 @@
-# Missingness Report
+﻿# Missingness Report
 
 | column | missing_count | missing_pct | handling_strategy | justification |
 |---|---:|---:|---|---|
@@ -21,3 +21,4 @@
 
 ## Strategy Notes
 - Decisions documented in notebook markdown cells and outlier_flags.txt.
+

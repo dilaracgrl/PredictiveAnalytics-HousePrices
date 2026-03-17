@@ -1,4 +1,4 @@
-# Model Selection Reasoning (Task 03 Baseline)
+﻿# Model Selection Reasoning (Task 03 Baseline)
 
 ## Why this baseline model
 I selected **Linear Regression** as the baseline because it is simple, fast, and highly interpretable.
@@ -56,3 +56,4 @@ This baseline intentionally does not model interactions explicitly; those are re
 ## Feature Engineering Ideas for Task 04
 - Borough x room_type interaction features.
 - Spatial features (distance-t
+

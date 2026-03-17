@@ -1,4 +1,4 @@
-# Improvement Reasoning (Task 04)
+﻿# Improvement Reasoning (Task 04)
 
 ## Baseline diagnosis
 - Baseline RMSE=150.5786, MAE=106.2309, R2=-0.6251.
@@ -37,3 +37,4 @@
 - Manhattan + Entire home/apt forms the highest-price subgroup.
 - Shared/private room listings are consistently lower-price, but spread varies by borough.
 - Spatial scatter s
+

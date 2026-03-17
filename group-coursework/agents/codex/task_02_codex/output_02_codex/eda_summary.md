@@ -1,4 +1,4 @@
-# EDA Summary (Task 02)
+﻿# EDA Summary (Task 02)
 
 ## Target Variable: `price`
 - `price` is strongly right-skewed (skewness = 19.12) with a long tail.
@@ -34,3 +34,4 @@ availability_365                  0.117916
 latitude                          0.062962
 number_of_reviews                -0.057829
 reviews_per_month                -0.055841
+

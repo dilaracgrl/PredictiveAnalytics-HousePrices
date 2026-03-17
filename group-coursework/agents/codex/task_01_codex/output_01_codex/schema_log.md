@@ -1,4 +1,4 @@
-```text
+﻿```text
 NYC Airbnb 2019 - Schema Log
 Rows: 48895
 Columns: 16
@@ -22,3 +22,4 @@ calculated_host_listings_count,int64,48895,47,Host listing count
 availability_365,int64,48895,366,Days available in a year
 
 ```
+
