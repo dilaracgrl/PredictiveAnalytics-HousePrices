@@ -1,4 +1,5 @@
-agent_name,tool,task_id,score_0_to_5,time_mins,notes,failure_mode
-placeholder,Claude (claude.ai),task_01_data_ingestion,0,0,PLACEHOLDER — replace with real run,none
-placeholder,Codex (ChatGPT),task_01_data_ingestion,0,0,PLACEHOLDER — replace with real run,none
+﻿agent_name,tool,task_id,score_0_to_5,time_mins,notes,failure_mode
+placeholder,Claude (claude.ai),task_01_data_ingestion,0,0,PLACEHOLDER - replace with real run,none
+placeholder,Codex (ChatGPT),task_01_data_ingestion,0,0,PLACEHOLDER - replace with real run,none
 moham,Codex,task_01_data_ingestion,5,25.0,task_01_complete,none
+Caroline,Antigravity,task_01_data_ingestion,5,15.0,clean output with outlier flags,none
