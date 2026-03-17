@@ -4,3 +4,6 @@ placeholder,Codex (ChatGPT),task_01_data_ingestion,0,0,PLACEHOLDER - replace wit
 moham,Codex,task_01_data_ingestion,5,25.0,task_01_complete,none
 Caroline,Antigravity,task_01_data_ingestion,5,15.0,clean output with outlier flags,none
 dilara,Claude (claude.ai),task_01_data_ingestion,2,20.0,ran notebook all checks pass,none
+dilara,Claude (claude.ai),task_02_eda,5,30.0,...,none
+Caroline,Antigravity,task_02_eda,5,20.0,...,none
+moham,Codex,task_02_eda,5,25.0,...,none
