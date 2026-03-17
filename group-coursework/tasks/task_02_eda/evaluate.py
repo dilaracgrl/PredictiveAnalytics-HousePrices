@@ -5,13 +5,20 @@ Shared scoring script. All agents run their outputs through this file.
 Usage:
     python tasks/task_02_eda/evaluate.py \
         --agent agents/antigravity/task_02/ \
-        --name <your_name> --tool "Antigravity" \
-        --time 25 --notes "clean output" --failure "none"
+        --name caroline --tool "Antigravity" \
+        --time 20 --notes "3 plots, eda_summary written" --failure "none"
+
+    # For agents with renamed output folders:
+    python tasks/task_02_eda/evaluate.py \
+        --agent agents/claude/task_02_claude/ \
+        --outputs outputs_claude \
+        --name dilara --tool "Claude (claude.ai)" \
+        --time 25 --notes "..." --failure "..."
 """
 
 import argparse
 import csv
-import glob
+import json
 import sys
 from pathlib import Path
 
@@ -21,56 +28,95 @@ MAX_SCORE = 5
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def find_outputs(agent_dir: Path, outputs_name: str) -> Path:
+    """Return the outputs folder, checking agent root and subfolders."""
+    direct = agent_dir / outputs_name
+    if direct.exists():
+        return direct
+    # also check one level up in case agent_dir is already inside task folder
+    for sub in agent_dir.iterdir():
+        candidate = sub / outputs_name
+        if candidate.exists():
+            return candidate
+    return direct  # return even if missing so checks can report FAIL
+
+
+def find_notebook(agent_dir: Path, outputs_dir: Path):
+    """Find any .ipynb in the agent task folder or outputs folder."""
+    nbs = list(agent_dir.glob("*.ipynb")) + list(outputs_dir.glob("*.ipynb"))
+    return nbs
+
+
+# ---------------------------------------------------------------------------
 # Automated checks
 # ---------------------------------------------------------------------------
 
-def check_notebook_present(agent_dir: Path) -> tuple[bool, str]:
-    notebooks = list(agent_dir.glob("*.ipynb")) + list(
-        (agent_dir / "outputs").glob("*.ipynb")
-    )
-    if notebooks:
-        return True, "PASS - notebook present"
-    return False, "FAIL - no .ipynb found in task folder or outputs/"
-
-
-def check_plots(agent_dir: Path) -> tuple[bool, str]:
-    outputs = agent_dir / "outputs"
-    if not outputs.exists():
-        return False, "FAIL - outputs/ folder not found"
-    pngs = list(outputs.glob("*.png")) + list(outputs.glob("*.pdf"))
+def check_plots(outputs_dir: Path) -> tuple[bool, str]:
+    if not outputs_dir.exists():
+        return False, f"FAIL - outputs folder not found: {outputs_dir}"
+    pngs = list(outputs_dir.glob("*.png")) + list(outputs_dir.glob("*.pdf"))
     if len(pngs) >= 3:
-        return True, f"PASS - {len(pngs)} plot file(s) found in outputs/"
-    return False, f"FAIL - only {len(pngs)} plot file(s) found, need at least 3"
+        return True, f"PASS - {len(pngs)} plot file(s) found"
+    return False, f"FAIL - {len(pngs)} plot file(s) found, need at least 3"
 
 
-def check_eda_summary(agent_dir: Path) -> tuple[bool, str]:
-    f = agent_dir / "outputs" / "eda_summary.md"
+def check_eda_summary(outputs_dir: Path) -> tuple[bool, str]:
+    f = outputs_dir / "eda_summary.md"
     if not f.exists():
-        return False, "FAIL - eda_summary.md not found in outputs/"
-    content = f.read_text()
-    if len(content.strip()) < 100:
-        return False, "FAIL - eda_summary.md is too short (under 100 chars)"
-    return True, "PASS - eda_summary.md present with content"
+        return False, "FAIL - eda_summary.md not found in outputs folder"
+    content = f.read_text().lower()
+    if len(content.strip()) < 150:
+        return False, "FAIL - eda_summary.md too short to contain substantive findings"
+    # Must reference the target variable and at least one specific feature
+    has_target = any(w in content for w in ["price", "target"])
+    has_feature = any(w in content for w in [
+        "room_type", "neighbourhood", "borough", "minimum_nights",
+        "availability", "correlation", "distribution", "skew"
+    ])
+    has_insight = any(w in content for w in [
+        "suggests", "indicates", "implies", "therefore", "because",
+        "higher", "lower", "significant", "dominant", "weak", "strong"
+    ])
+    failures = []
+    if not has_target:
+        failures.append("no reference to target variable (price)")
+    if not has_feature:
+        failures.append("no reference to any specific feature")
+    if not has_insight:
+        failures.append("no interpretive language -- reads as plot description not insight")
+    if failures:
+        return False, f"FAIL - eda_summary.md: {'; '.join(failures)}"
+    return True, "PASS - eda_summary.md contains substantive findings"
 
 
-def check_cells_cleared(agent_dir: Path) -> tuple[bool, str]:
-    import json
-    notebooks = list(agent_dir.glob("*.ipynb")) + list(
-        (agent_dir / "outputs").glob("*.ipynb")
-    )
-    if not notebooks:
+def check_notebook_present(agent_dir: Path, outputs_dir: Path) -> tuple[bool, str]:
+    nbs = find_notebook(agent_dir, outputs_dir)
+    if nbs:
+        return True, f"PASS - notebook present ({nbs[0].name})"
+    return False, "FAIL - no .ipynb found in task folder or outputs folder"
+
+
+def check_cells_cleared(agent_dir: Path, outputs_dir: Path) -> tuple[bool, str]:
+    nbs = find_notebook(agent_dir, outputs_dir)
+    if not nbs:
         return False, "SKIP - no notebook found to check"
-    nb_path = notebooks[0]
+    nb_path = nbs[0]
     try:
-        with open(nb_path) as f:
+        with open(nb_path, encoding="utf-8") as f:
             nb = json.load(f)
     except Exception as e:
         return False, f"FAIL - could not read notebook: {e}"
-    for cell in nb.get("cells", []):
-        outputs = cell.get("outputs", [])
-        if outputs:
-            return False, f"FAIL - notebook has {len(outputs)} output(s) in cells; clear before committing"
-    return True, "PASS - notebook cells are cleared"
+    cells_with_output = sum(
+        1 for cell in nb.get("cells", [])
+        if cell.get("outputs")
+    )
+    if cells_with_output == 0:
+        return True, "PASS - all notebook cells are cleared"
+    return False, (f"FAIL - {cells_with_output} cell(s) still have outputs; "
+                   "run Kernel > Restart & Clear Output before committing")
 
 
 # ---------------------------------------------------------------------------
@@ -78,34 +124,41 @@ def check_cells_cleared(agent_dir: Path) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 
 def manual_check_no_leakage(agent_dir: Path) -> tuple[bool, str]:
-    print("\n[MANUAL CHECK] Open the EDA notebook and check cell order.")
-    print("Question: Is the train/test split performed BEFORE any plots, statistics, or value_counts()?")
+    print("\n[MANUAL CHECK 1 of 2] Open the EDA notebook and check cell order.")
+    print("Question: Is the train/test split the FIRST operation after loading data,")
+    print("          before any plots, statistics, or value_counts()?")
     answer = input("Enter y/n: ").strip().lower()
     if answer == "y":
         return True, "PASS (manual) - no test-set leakage detected"
-    return False, "FAIL (manual) - EDA appears to use test data or full dataset"
+    return False, "FAIL (manual) - EDA uses test data or full dataset before split"
 
 
-def manual_check_insights(agent_dir: Path) -> tuple[bool, str]:
-    print("\n[MANUAL CHECK] Open outputs/eda_summary.md")
-    print("Question: Does it contain substantive written findings, not just plot descriptions?")
+def manual_check_insights(outputs_dir: Path) -> tuple[bool, str]:
+    print("\n[MANUAL CHECK 2 of 2] Read outputs/eda_summary.md carefully.")
+    print("Question: Does every plot have a written interpretation that explains")
+    print("          what the pattern means for modelling, not just what it shows?")
     answer = input("Enter y/n: ").strip().lower()
     if answer == "y":
-        return True, "PASS (manual) - insights are substantive"
-    return False, "FAIL (manual) - summary only describes plots without interpretation"
+        return True, "PASS (manual) - insights are substantive and modelling-relevant"
+    return False, "FAIL (manual) - summary describes plots rather than interpreting them"
 
 
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
 
-def run_evaluation(agent_dir: Path) -> tuple[int, list[str]]:
+def run_evaluation(agent_dir: Path, outputs_name: str) -> tuple[int, list[str]]:
+    outputs_dir = find_outputs(agent_dir, outputs_name)
     results = []
     score = 0
 
-    for check_fn in [check_plots, check_eda_summary,
-                     check_notebook_present, check_cells_cleared]:
-        ok, msg = check_fn(agent_dir)
+    for check_fn, args in [
+        (check_plots,            (outputs_dir,)),
+        (check_eda_summary,      (outputs_dir,)),
+        (check_notebook_present, (agent_dir, outputs_dir)),
+        (check_cells_cleared,    (agent_dir, outputs_dir)),
+    ]:
+        ok, msg = check_fn(*args)
         results.append(msg)
         if ok:
             score += 1
@@ -115,7 +168,16 @@ def run_evaluation(agent_dir: Path) -> tuple[int, list[str]]:
     if ok:
         score += 1
 
-    return min(score, MAX_SCORE), results
+    # Insights quality replaces one automated point to keep max at 5
+    # Only called if automated checks pass - reduces gaming
+    ok2, msg2 = manual_check_insights(outputs_dir)
+    results.append(msg2)
+    # Insights check modifies the score only if it fails (deduct 1)
+    if not ok2 and score > 0:
+        score -= 1
+        results[-1] = msg2 + " [deducted 1 point]"
+
+    return min(max(score, 0), MAX_SCORE), results
 
 
 # ---------------------------------------------------------------------------
@@ -145,14 +207,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate Task 02 - EDA")
     parser.add_argument("--agent", required=True,
                         help="Path to agent task folder, e.g. agents/antigravity/task_02/")
+    parser.add_argument("--outputs", default="outputs",
+                        help="Name of outputs subfolder (default: outputs). "
+                             "Use 'outputs_claude' for Claude, 'output_02_codex' for Codex.")
     parser.add_argument("--name", required=True, help="Your name")
-    parser.add_argument("--tool", required=True,
-                        help="Tool used, e.g. 'Antigravity'")
-    parser.add_argument("--time", required=True, type=float,
-                        help="Time spent in minutes")
-    parser.add_argument("--notes", default="", help="Brief notes on the run")
-    parser.add_argument("--failure", default="none",
-                        help="Failure mode observed, or 'none'")
+    parser.add_argument("--tool", required=True, help="Tool used")
+    parser.add_argument("--time", required=True, type=float, help="Time spent in minutes")
+    parser.add_argument("--notes", default="", help="Brief notes")
+    parser.add_argument("--failure", default="none", help="Failure mode or 'none'")
     args = parser.parse_args()
 
     agent_dir = Path(args.agent)
@@ -161,11 +223,12 @@ def main() -> None:
         sys.exit(1)
 
     print(f"\n{'='*60}")
-    print(f"Evaluating: {agent_dir}")
-    print(f"Scorer    : {args.name}  |  Tool: {args.tool}")
+    print(f"Evaluating : {agent_dir}")
+    print(f"Outputs in : {args.outputs}/")
+    print(f"Scorer     : {args.name}  |  Tool: {args.tool}")
     print(f"{'='*60}\n")
 
-    score, results = run_evaluation(agent_dir)
+    score, results = run_evaluation(agent_dir, args.outputs)
 
     print("\n--- Results ---")
     for line in results:
