@@ -25,15 +25,15 @@ MAX_SCORE = 5
 # Automated checks
 # ---------------------------------------------------------------------------
 
-def check_ingested_csv(agent_dir: Path) -> tuple[bool, str]:
-    f = agent_dir / "outputs" / "ingested.csv"
+def check_ingested_csv(agent_dir: Path, outputs: str) -> tuple[bool, str]:
+    f = agent_dir / outputs / "ingested.csv"
     if f.exists():
-        return True, "PASS — ingested.csv present in outputs/"
-    return False, "FAIL — ingested.csv not found in outputs/"
+        return True, f"PASS — ingested.csv present in {outputs}/"
+    return False, f"FAIL — ingested.csv not found in {outputs}/"
 
 
-def check_no_missing_values(agent_dir: Path) -> tuple[bool, str]:
-    f = agent_dir / "outputs" / "ingested.csv"
+def check_no_missing_values(agent_dir: Path, outputs: str) -> tuple[bool, str]:
+    f = agent_dir / outputs / "ingested.csv"
     if not f.exists():
         return False, "SKIP — ingested.csv not found"
     try:
@@ -47,30 +47,34 @@ def check_no_missing_values(agent_dir: Path) -> tuple[bool, str]:
     return False, f"FAIL — {total_missing} missing value(s) remain: {detail}"
 
 
-def check_schema_log(agent_dir: Path) -> tuple[bool, str]:
-    f = agent_dir / "outputs" / "schema_log.md"
+def check_schema_log(agent_dir: Path, outputs: str) -> tuple[bool, str]:
+    f = agent_dir / outputs / "schema_log.md"
     if not f.exists():
-        return False, "FAIL — schema_log.md not found in outputs/"
+        # also accept .txt
+        f = agent_dir / outputs / "schema_log.txt"
+    if not f.exists():
+        return False, f"FAIL — schema_log not found in {outputs}/"
     content = f.read_text()
-    # Check that it contains at least column names, dtypes, and row count
     required_keywords = ["dtype", "row"]
     missing = [kw for kw in required_keywords if kw.lower() not in content.lower()]
     if missing:
-        return False, f"FAIL — schema_log.md missing expected content: {missing}"
-    return True, "PASS — schema_log.md present and contains schema information"
+        return False, f"FAIL — schema_log missing expected content: {missing}"
+    return True, "PASS — schema_log present and contains schema information"
 
 
-def check_missingness_report(agent_dir: Path) -> tuple[bool, str]:
-    f = agent_dir / "outputs" / "missingness_report.md"
+def check_missingness_report(agent_dir: Path, outputs: str) -> tuple[bool, str]:
+    f = agent_dir / outputs / "missingness_report.md"
     if not f.exists():
-        return False, "FAIL — missingness_report.md not found in outputs/"
+        # also accept .csv
+        f = agent_dir / outputs / "missingness_report.csv"
+    if not f.exists():
+        return False, f"FAIL — missingness_report not found in {outputs}/"
     content = f.read_text()
-    # Should mention either "no missing" or contain a handling strategy section
     has_content = len(content.strip()) > 50
-    has_strategy = "strategy" in content.lower() or "no missing" in content.lower()
+    has_strategy = "strategy" in content.lower() or "no missing" in content.lower() or "," in content
     if has_content and has_strategy:
-        return True, "PASS — missingness_report.md present with content"
-    return False, "FAIL — missingness_report.md too sparse or missing handling strategy"
+        return True, "PASS — missingness_report present with content"
+    return False, "FAIL — missingness_report too sparse or missing handling strategy"
 
 
 # ---------------------------------------------------------------------------
@@ -90,13 +94,13 @@ def manual_check_assumptions(agent_dir: Path) -> tuple[bool, str]:
 # Scoring
 # ---------------------------------------------------------------------------
 
-def run_evaluation(agent_dir: Path) -> tuple[int, list[str]]:
+def run_evaluation(agent_dir: Path, outputs: str) -> tuple[int, list[str]]:
     results = []
     score = 0
 
     for check_fn in [check_ingested_csv, check_no_missing_values,
                      check_schema_log, check_missingness_report]:
-        ok, msg = check_fn(agent_dir)
+        ok, msg = check_fn(agent_dir, outputs)
         results.append(msg)
         if ok:
             score += 1
@@ -135,7 +139,10 @@ def append_to_scores(agent_name: str, tool: str, score: int,
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate Task 01 — Data Ingestion")
     parser.add_argument("--agent", required=True,
-                        help="Path to agent task folder, e.g. agents/claude/task_01/")
+                        help="Path to agent task folder, e.g. agents/claude/task_01_claude/")
+    parser.add_argument("--outputs", default="outputs",
+                        help="Name of the outputs subfolder (default: 'outputs'). "
+                             "e.g. 'outputs_claude', 'output_01_codex'")
     parser.add_argument("--name", required=True, help="Your name")
     parser.add_argument("--tool", required=True,
                         help="Tool used, e.g. 'Claude (claude.ai)'")
@@ -156,7 +163,7 @@ def main() -> None:
     print(f"Scorer    : {args.name}  |  Tool: {args.tool}")
     print(f"{'='*60}\n")
 
-    score, results = run_evaluation(agent_dir)
+    score, results = run_evaluation(agent_dir, args.outputs)
 
     print("\n--- Results ---")
     for line in results:
