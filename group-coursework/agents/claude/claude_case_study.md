@@ -40,6 +40,18 @@ The agent wrote `lgbm.fit(X_train, y_train, eval_set=[(X_val, y_val)])` for earl
 
 **Receipt:** Interaction log entries 6 and 11. Entry 6 shows I flagged the issue ("Modified — flagged LightGBM early stopping issue"), entry 11 shows the correction.
 
+### 3. Negative R2 on Baseline Model — Model Worse Than the Mean Predictor
+
+**What failed:**
+The Codex baseline (Task 03) produced RMSE = 150.58, MAE = 106.23, and R2 = -0.625. A negative R2 means the model performed worse than simply predicting the dataset mean price ($152) for every listing. The code ran without errors and produced a results CSV with plausible-looking numbers.
+
+**What made this dangerous:** There was no automatic signal that anything had gone wrong. The pipeline completed, the CSV was written, and the numbers looked like real metrics. Without comparing R2 against zero or checking against a dummy baseline, this failure would have gone undetected.
+
+**How I caught it:** R2 = -0.625 appeared in `output_03_codex/baseline_results.csv` and was flagged during the evaluate.py run. Cross-referencing against Antigravity (R2 = 0.236) and Claude (R2 = 0.362) on the same dataset confirmed the Codex baseline was not a valid model.
+
+**How I fixed it:** The root cause was the absence of a log transform on the `price` target. The price distribution is heavily right-skewed and extreme values dominated the squared error loss, preventing the linear model from fitting the bulk of the data. Antigravity and Claude both applied `log1p` transforms via `TransformedTargetRegressor`. Task 04 switched to Random Forest, which is more robust to skewed targets without requiring an explicit transform. RMSE improved from 150.58 to 86.53 and R2 from -0.625 to 0.463 — the largest absolute improvement of any agent across all tasks.
+
+**Receipt:** `agents/codex/task_03_codex/output_03_codex/baseline_results.csv` and `agents/codex/task_04_codex/output_04_codex/improved_results.csv`.
 ---
 
 **Additional agent error (bonus):** The feature importance plot was hardcoded to show LightGBM importances even though Random Forest was the selected best model. The code `'LightGBM-Tuned' if 'LightGBM-Tuned' in models else 'LightGBM'` always picks LightGBM regardless of which model won. I caught this by checking the plot title against the best model name. Receipt: interaction log entry 13.
