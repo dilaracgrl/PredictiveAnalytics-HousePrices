@@ -52,6 +52,17 @@
   - Updated references to `task_0X_codex` and `output_0X_codex`.
   - Rechecked prompt logs and output paths after rename.
 
+### Case 3: Negative R2 on Baseline Model Model Worse Than the Mean Predictor
+- What failed:
+  - Task 03 baseline produced RMSE = 150.58, MAE = 106.23, and R2 = -0.625. A negative R2 means the model performed worse than simply predicting the mean price for every listing. The code ran without errors and the results CSV looked like valid output.
+- Impact:
+  - A pipeline that completes successfully but produces a model worse than the mean predictor would have been submitted as a valid baseline with no automatic warning. Cross-referencing against Antigravity (R2 = 0.236) and Claude (R2 = 0.362) on the same dataset was the only way to identify the failure.
+- Receipt:
+  - `agents/codex/task_03_codex/output_03_codex/baseline_results.csv` shows R2 = -0.625. `agents/codex/task_04_codex/output_04_codex/improved_results.csv` shows the corrected result.
+- What we did to verify/fix:
+  - Root cause was the absence of a log transform on the `price` target. The price distribution is heavily right-skewed and extreme values dominated the squared error loss. Antigravity and Claude both applied `log1p` transforms to the target and both achieved positive R2 on the same data.
+  - Task 04 switched to Random Forest, which is more robust to skewed targets without an explicit transform. RMSE improved from 150.58 to 86.53 and R2 from -0.625 to 0.463 -- the largest absolute improvement of any agent across all four tasks.
+  
 ## 3) Short Reflection
 - Codex was strongest at fast pipeline assembly and documentation scaffolding.
 - Most failures were execution-environment assumptions and path consistency during iterative refactors.
