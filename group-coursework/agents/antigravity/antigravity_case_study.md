@@ -3,11 +3,17 @@
 ## Where the Agent Significantly Helped
 
 ### 1. Advanced Feature Engineering and Model Selection (Task 04)
-**What happened:** The agent successfully reasoned about the baseline model's weaknesses (Ridge regression) and proposed a high-impact strategy. It suggested using `HistGradientBoostingRegressor` and explicitly handling the high-cardinality `neighbourhood` feature using `TargetEncoder`. It correctly set up the Scikit-Learn pipeline to ensure target encoding was fitted properly without data leakage.
-**Receipts & Verification:** 
-The agent generated `improvement_reasoning.md` which accurately documented its assumptions: 
-> *"Gradient boosting trees can branch inherently to create multi-dimensional geographic bounding boxes... TargetEncoder explicitly fitted within our Pipeline successfully guarantees that `X_test` remains untainted."*
-The code executed cleanly, and the reported evaluation metrics proved the reasoning was sound.
+
+**What happened:**
+The agent identified that the Ridge baseline (RMSE = 115.18, R2 = 0.236) was underfitting because it could not encode the `neighbourhood` column  221 distinct values make one-hot encoding impractical for Ridge due to multicollinearity and sparsity. The agent proposed switching to `HistGradientBoostingRegressor` with `TargetEncoder` on `neighbourhood`, reasoning that gradient-boosted trees partition on encoded values directly and handle high-cardinality categoricals without the sparsity problem.
+
+The critical methodological step was placing `TargetEncoder` inside the sklearn `Pipeline` `fit()` call rather than applying it before the split. A naive target encoding computes neighbourhood mean prices on the full training set, which leaks target information into each training row's own encoding. Sklearn's `TargetEncoder` avoids this using cross-validation smoothing: each fold's encoding is computed from out-of-fold rows only.
+
+**Receipt and verification:**
+The improved model achieved RMSE = 106.07, MAE = 50.59, R2 = 0.352 on the test set  a 7.91% RMSE reduction and 49% relative R2 improvement over baseline. Verification confirmed `TargetEncoder` appeared inside the Pipeline `fit()` call, not before the split. The improved model was loaded from `outputs/improved_model.pkl` and test predictions were manually recomputed to confirm the reported metrics matched. Completed in one iteration in 35 minutes.
+
+**What made this significant:**
+The agent produced cross-task continuity: the Task 04 model choice directly responded to the Task 02 EDA finding that categorical location features dominate price prediction and the Task 03 limitation note that Ridge cannot capture spatial interactions. This is not typical of agents that treat each prompt as an isolated request.
 
 ### 2. Systematic Data Profiling and EDA Generation (Tasks 01 & 02)
 **What happened:** The agent wrote structured, reusable code to identify missingness and flag outliers, compiling the findings into well-formatted CSV and Markdown reports. It significantly sped up the data auditing phase by automating standard exploratory data analysis logic.
