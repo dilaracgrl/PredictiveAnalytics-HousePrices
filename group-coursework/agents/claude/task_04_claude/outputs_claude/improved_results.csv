@@ -1,4 +1,0 @@
-model,RMSE_USD,MAE_USD,R2_log,R2_raw
-"Baseline (Ridge, no FE)",83.32,47.95,0.5494,0.362
-Strategy A (Ridge + FE),80.09,45.81,0.5964,0.4105
-Strategy B (RF + FE),74.87,42.59,0.6472,0.4849

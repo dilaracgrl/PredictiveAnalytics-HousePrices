@@ -1,3 +1,0 @@
-split,RMSE_USD,MAE_USD,R2_log,R2_raw
-Train,83.65,48.02,0.5366,0.3485
-Test,83.32,47.95,0.5494,0.362
