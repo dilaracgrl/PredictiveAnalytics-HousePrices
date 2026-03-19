@@ -42,6 +42,14 @@
 ### What each agent was asked to do
 Load `AB_NYC_2019.csv`, validate the schema, handle missingness, flag outliers, save `ingested.csv` + `schema_log` + `missingness_report`.
 
+### Task 01 — At a glance
+
+| Agent | Schema log | Missingness report | Outlier flags | Rows out | Path handling | Score |
+|-------|------------|--------------------|---------------|----------|---------------|-------|
+| **Claude** | `schema_log.txt` (wrong extension for rubric) | CSV, no per-column justification | price=0 dropped, >$500 flagged | 48,884 (11 dropped) | ✗ First run: 0 rows (path bug) | 2/5 |
+| **Antigravity** | `schema_log.md` | CSV + handling strategy in markdown | price=0 dropped, price cap $1000 | Capped | ✗ First run: absolute path (fixed) | 5/5 |
+| **Codex** | `schema_log.md` + description column | CSV with **handling_strategy** and **justification** per column | IQR + rule-based; clip `minimum_nights` 99th | Dropped price≤0, clipped numerics | ✗ Path drift after rename | 5/5 |
+
 ### Missingness in the dataset
 
 | Column | Missing | % | Meaning |
@@ -74,12 +82,36 @@ Load `AB_NYC_2019.csv`, validate the schema, handle missingness, flag outliers, 
 
 **Codex produced the most rigorous ingestion artefact.** Dropping `host_id` is the correct DS decision (it is an identifier, not a feature) and documenting every decision in a structured CSV with a justification column is a level of rigour neither Claude nor Antigravity matched.
 
+### Task 01 — Agreements and disagreements
+
+**Agreed**
+- All three correctly identified and reported missingness: `last_review` and `reviews_per_month` at 20.56%; `name` and `host_name` negligible.
+- All treated `reviews_per_month` NaN as semantically zero (fill with 0).
+- No target leakage: no agent used target variable to decide missingness handling.
+
+**Disagreed**
+- **Schema log format:** Claude produced `.txt` (rubric expected `.md`) → automated check failed.
+- **Column drops:** Only Codex dropped `host_id` (identifier) and `last_review` (high missingness, date-type).
+- **Outliers at ingestion:** Codex clipped `minimum_nights` at 99th percentile; Antigravity capped price at $1,000; Claude only flagged, did not remove.
+
+### Task 01 — Takeaway
+
+Ingestion quality directly affects downstream tasks. The most robust approach: (1) per-column missingness justification (like Codex), (2) drop non-features (`host_id`) and document it, (3) use path checks so that 0-row loads fail fast instead of propagating silently.
+
 ---
 
 ## Task 02 — Exploratory Data Analysis
 
 ### What each agent was asked to do
 Explore `price` distribution, feature-target relationships, and geographic patterns. Produce ≥3 plots with markdown interpretation, `eda_cleaned.csv`, and `eda_summary.md`.
+
+### Task 02 — At a glance
+
+| Agent | Plots | `eda_cleaned.csv` | Price cleaning | `minimum_nights` | EDA → Task 04 link |
+|-------|-------|--------------------|----------------|------------------|--------------------|
+| **Claude** | 9 (incl. geo, pairplot, top neighbourhoods) | Yes; price > 99th removed | 99th percentile | Clip at 30 | Explicit FE list: geo-cluster, target enc, interactions |
+| **Antigravity** | 3 (distribution, correlation, feature vs target) | Yes; price=0 dropped, cap $1000 | Hard $1,000 cap | Cap 365 | TargetEncoding + spatial clustering suggested |
+| **Codex** | 8 (incl. geo, borough×room heatmap, boxplot) | Yes; price > 99.5th removed | 99.5th percentile (~$1000) | Clip at 365 | Borough×room_type, spatial features, non-linear transforms |
 
 ### Plot comparison
 
@@ -101,7 +133,7 @@ Explore `price` distribution, feature-target relationships, and geographic patte
 ### Price Distribution
 
 **Claude**
-![Price Distribution — Claude](../agents/claude/task_02_claude/outputs_claude/price_distribution.png)
+![Price Distribution — Claude](../agents/claude/task_02/outputs/price_distribution.png)
 
 **Codex**
 ![Price Distribution — Codex](../agents/codex/task_02_codex/output_02_codex/price_distribution_hist.png)
@@ -116,7 +148,7 @@ All three agents correctly identified the right-skewed distribution and recommen
 ### Correlation Heatmap
 
 **Claude**
-![Correlation Heatmap — Claude](../agents/claude/task_02_claude/outputs_claude/correlation_with_log_price.png)
+![Correlation Heatmap — Claude](../agents/claude/task_02/outputs/correlation_with_log_price.png)
 
 **Codex**
 ![Correlation Heatmap — Codex](../agents/codex/task_02_codex/output_02_codex/feature_correlation_heatmap.png)
@@ -131,7 +163,7 @@ Key finding consistent across all agents: `longitude` has the strongest linear c
 ### Geographic Price Pattern
 
 **Claude**
-![Geo Scatter — Claude](../agents/claude/task_02_claude/outputs_claude/geo_price_scatter.png)
+![Geo Scatter — Claude](../agents/claude/task_02/outputs/geo_price_scatter.png)
 
 **Codex**
 ![Geo Scatter — Codex](../agents/codex/task_02_codex/output_02_codex/geo_price_scatter.png)
@@ -143,7 +175,7 @@ Both Claude and Codex produced geographic scatter plots revealing the spatial pr
 ### Price by Borough and Room Type
 
 **Claude — Price Heatmap (Borough × Room Type)**
-![Borough Room Type Heatmap — Claude](../agents/claude/task_02_claude/outputs_claude/price_heatmap_borough_roomtype.png)
+![Borough Room Type Heatmap — Claude](../agents/claude/task_02/outputs/price_heatmap_borough_roomtype.png)
 
 **Codex — Borough × Room Type**
 ![Borough Room Type — Codex](../agents/codex/task_02_codex/output_02_codex/borough_roomtype_median_price_heatmap.png)
@@ -158,7 +190,7 @@ The Borough × Room Type interaction (Manhattan + Entire home/apt = highest pric
 ### Price by Room Type
 
 **Claude**
-![Price by Room Type — Claude](../agents/claude/task_02_claude/outputs_claude/price_by_room_type.png)
+![Price by Room Type — Claude](../agents/claude/task_02/outputs/price_by_room_type.png)
 
 **Codex**
 ![Price by Room Type — Codex](../agents/codex/task_02_codex/output_02_codex/price_by_room_type.png)
@@ -170,7 +202,7 @@ Entire home/apt listings are consistently the highest-priced room type across al
 ### Price by Borough
 
 **Claude**
-![Median Price by Borough — Claude](../agents/claude/task_02_claude/outputs_claude/median_price_by_borough.png)
+![Median Price by Borough — Claude](../agents/claude/task_02/outputs/median_price_by_borough.png)
 
 **Codex**
 ![Price by Borough — Codex](../agents/codex/task_02_codex/output_02_codex/price_by_borough.png)
@@ -192,14 +224,14 @@ The log-transformed distribution is approximately normal — confirming why `log
 ---
 
 ### Numeric Feature Distributions (Claude)
-![Numeric Distributions — Claude](../agents/claude/task_02_claude/outputs_claude/numeric_distributions.png)
+![Numeric Distributions — Claude](../agents/claude/task_02/outputs/numeric_distributions.png)
 
 `minimum_nights`, `number_of_reviews`, and `calculated_host_listings_count` are all right-skewed — the same pattern as `price`. This motivates the log1p transforms applied to these features in Claude's Task 04 feature engineering.
 
 ---
 
 ### Top Neighbourhoods by Price (Claude)
-![Top Neighbourhoods — Claude](../agents/claude/task_02_claude/outputs_claude/top_neighbourhoods_price.png)
+![Top Neighbourhoods — Claude](../agents/claude/task_02/outputs/top_neighbourhoods_price.png)
 
 Fort Wadsworth, Tribeca, and Sea Gate are the highest-median-price neighbourhoods. This plot is why `neighbourhood` (221 levels, excluded from the baseline) is worth reintroducing via target encoding in Task 04 — within-borough neighbourhood variation is large and predictively valuable.
 
@@ -219,7 +251,21 @@ Fort Wadsworth, Tribeca, and Sea Gate are the highest-median-price neighbourhood
 
 **The outlier cap difference matters downstream.** Antigravity's hard $1,000 cap removed a larger portion of the upper tail than the percentile-based approaches. This reduced training signal for high-price listings and inflated RMSE in Tasks 03 and 04 by an estimated ~$31.
 
-**Task 02 scores:** Claude 5/5 · Antigravity 4/5 (notebook output cells not cleared before commit) · Codex 4/5
+### Task 02 — Agreements and disagreements
+
+**Agreed**
+- `price` is strongly right-skewed; all recommend `log1p(price)` as regression target.
+- `room_type` and `neighbourhood_group` (borough) are the dominant structural drivers; Manhattan + entire home/apt = highest subgroup.
+- Geographic coordinates (`latitude`, `longitude`) carry spatial price signal; numeric review/availability features have weak linear correlation.
+
+**Disagreed**
+- **Outlier cap:** Claude 99th percentile; Codex 99.5th; Antigravity flat $1,000 → Antigravity’s cap is most aggressive and correlates with weakest Task 03/04 RMSE.
+- **Breadth of EDA:** Claude 9 plots (geo, pairplot, top neighbourhoods); Codex 8; Antigravity 3 — geographic and interaction heatmaps only from Claude and Codex.
+- **`neighbourhood`:** Claude and Antigravity explicitly recommend target encoding for Task 04; Codex mentions spatial/borough×room_type but not target encoding.
+
+### Task 02 — Takeaway
+
+EDA drives modelling: the log-target recommendation was followed by Claude and Antigravity in Task 03 but missed by Codex, with large impact. Conservative outlier trimming (e.g. 99th percentile) preserves signal; a flat $1,000 cap can over-trim and hurt final RMSE. Geographic and interaction plots (borough×room_type) directly motivate the best Task 04 feature engineering.
 
 ---
 
@@ -227,6 +273,14 @@ Fort Wadsworth, Tribeca, and Sea Gate are the highest-median-price neighbourhood
 
 ### What each agent was asked to do
 80/20 train/test split with SEED=42. Preprocessing fitted on train only. Report RMSE, MAE, R². Save model + results CSV.
+
+### Task 03 — At a glance
+
+| Agent | Model | Target | Features (categorical) | Test RMSE | Test R² | Overfit? |
+|-------|-------|--------|------------------------|-----------|--------|----------|
+| **Claude** | Ridge | log1p(price) | room_type, neighbourhood_group (one-hot); neighbourhood excluded | **83.32** | **0.549** | No (train≈test) |
+| **Antigravity** | Ridge (TransformedTargetRegressor) | log1p(price) | room_type, neighbourhood_group (one-hot) | 115.18 | 0.236 | — |
+| **Codex** | LinearRegression | **raw price** | room_type, neighbourhood_group + imputation | 150.58 | **−0.625** | N/A (no fit) |
 
 ### Results
 
@@ -241,7 +295,7 @@ R² = −0.625 means Codex's model is **worse than predicting the mean price for
 ### Predicted vs Actual
 
 **Claude**
-![Predicted vs Actual — Claude](../agents/claude/task_03_claude/outputs_claude/predicted_vs_actual.png)
+![Predicted vs Actual — Claude](../agents/claude/task_03/outputs/predicted_vs_actual.png)
 
 **Antigravity**
 ![Predicted vs Actual — Antigravity](../agents/antigravity/task_03/outputs/plot_actual_vs_predicted.png)
@@ -254,7 +308,7 @@ Claude and Antigravity show the characteristic funnel shape of a model that fits
 ### Residual Plots
 
 **Claude**
-![Residuals — Claude](../agents/claude/task_03_claude/outputs_claude/residual_plots.png)
+![Residuals — Claude](../agents/claude/task_03/outputs/residual_plots.png)
 
 **Antigravity**
 ![Residuals — Antigravity](../agents/antigravity/task_03/outputs/plot_residuals.png)
@@ -265,7 +319,7 @@ Claude and Antigravity show the characteristic funnel shape of a model that fits
 Claude's residuals show heteroscedasticity (increasing variance at high predicted prices) — correctly diagnosed in the Task 04 improvement plan. Antigravity shows a similar pattern. Codex's residuals have no systematic structure because the model failed to learn any meaningful signal.
 
 ### Model Coefficients (Claude — Ridge)
-![Model Coefficients — Claude](../agents/claude/task_03_claude/outputs_claude/model_coefficients.png)
+![Model Coefficients — Claude](../agents/claude/task_03/outputs/model_coefficients.png)
 
 The coefficient plot confirms the EDA findings: `room_type_Entire home/apt` and `neighbourhood_group_Manhattan` carry the largest positive weights. Geographic coordinates (`latitude`, `longitude`) contribute meaningful signal even in the linear model.
 
@@ -315,7 +369,26 @@ pipeline = Pipeline([
 # No log1p on y — this is the root cause of R² = −0.625
 ```
 
-**Task 03 scores:** Claude 4/5 (output naming mismatch) · Antigravity 5/5 · Codex 5/5
+### Task 03 — Why results differ
+
+- **Claude vs Antigravity (83 vs 115 RMSE):** Both use Ridge + log target. The gap comes from (1) Task 02 cleaning — Claude keeps more of the upper tail; (2) feature set and scaling choices; (3) possible differences in `eda_cleaned` row counts and preprocessing.
+- **Codex (150.58, R² −0.625):** Raw `price` makes squared-error loss dominated by extreme listings; the model fails to learn a useful mapping. No code bug — a modelling assumption (no transform) that violates EDA recommendations.
+
+### Task 03 — Agreements and disagreements
+
+**Agreed**
+- All used an 80/20 split with a fixed seed (42); preprocessing inside a Pipeline fitted on train only.
+- All reported RMSE, MAE, and R² in USD (or equivalent).
+- Categoricals: at least `room_type` and `neighbourhood_group`; numeric features scaled or imputed.
+
+**Disagreed**
+- **Target:** Claude and Antigravity used log1p(price); Codex used raw price → Codex baseline is invalid (worse than mean).
+- **Regularisation:** Claude and Antigravity used Ridge; Codex used plain OLS → instability with one-hot and skewed target.
+- **`neighbourhood`:** Claude explicitly excluded (high cardinality) with written justification; others did not exclude or used different handling.
+
+### Task 03 — Takeaway
+
+A “minimal” baseline must still be *statistically valid*: R² &gt; 0 and preferably comparable to a naive predictor. Applying the EDA recommendation (log1p(price)) in the baseline avoids silent failure and makes Task 04 improvements interpretable. Ridge (or similar) is safer than plain OLS after one-hot encoding.
 
 ---
 
@@ -323,6 +396,16 @@ pipeline = Pipeline([
 
 ### What each agent was asked to do
 Diagnose the baseline weaknesses, implement ≥2 improvement strategies, compare honestly against baseline, save improved model + results.
+
+### Task 04 — At a glance
+
+| Agent | Strategies compared | Best model | Best RMSE | vs own baseline | Neighbourhood handling |
+|-------|---------------------|------------|-----------|----------------|------------------------|
+| **Claude** | Ridge (no FE) · Ridge+FE · RF+FE | Random Forest + FE | **74.87** | −10.1% | Target encoding + geo-cluster (k=20) |
+| **Antigravity** | HistGradientBoosting + TargetEncoder | HistGradientBoostingRegressor | 106.07 | −7.9% | TargetEncoder in Pipeline |
+| **Codex** | Linear baseline · RF · Gradient Boosting | Random Forest + FE | 86.53 | −42.5%* | One-hot (no target encoding) |
+
+*\*Codex’s large % improvement is recovery from a broken baseline.*
 
 ### Results
 
@@ -335,9 +418,9 @@ Diagnose the baseline weaknesses, implement ≥2 improvement strategies, compare
 *\*Codex's 42.5% improvement is recovery from a broken baseline, not genuine advancement. Starting from a comparable baseline (83.32), Codex's final 86.53 is still worse than Claude's baseline.*
 
 ### Baseline Diagnosis (Claude — before improvement)
-![Baseline Diagnosis — Claude](../agents/claude/task_04_claude/outputs_claude/baseline_diagnosis.png)
+![Baseline Diagnosis — Claude](../agents/claude/task_04/outputs/baseline_diagnosis.png)
 
-![Baseline Residuals by Borough — Claude](../agents/claude/task_04_claude/outputs_claude/baseline_residuals_by_borough.png)
+![Baseline Residuals by Borough — Claude](../agents/claude/task_04/outputs/baseline_residuals_by_borough.png)
 
 The per-borough residual breakdown shows Manhattan listings are most under-predicted — the baseline model's borough-level one-hot encoding misses the within-borough price variation driven by specific neighbourhoods and lat/lon clusters. This directly motivates the neighbourhood target encoding and geo-clustering added in Task 04.
 
@@ -346,7 +429,7 @@ The per-borough residual breakdown shows Manhattan listings are most under-predi
 ### Model comparison charts
 
 **Claude — Strategy comparison**
-![Model Comparison — Claude](../agents/claude/task_04_claude/outputs_claude/model_comparison.png)
+![Model Comparison — Claude](../agents/claude/task_04/outputs/model_comparison.png)
 
 **Codex — Baseline vs Improved**
 ![Baseline vs Improved — Codex](../agents/codex/task_04_codex/output_04_codex/baseline_vs_improved_metrics.png)
@@ -354,7 +437,7 @@ The per-borough residual breakdown shows Manhattan listings are most under-predi
 ### Predicted vs Actual — Improved models
 
 **Claude**
-![Improved Predicted vs Actual — Claude](../agents/claude/task_04_claude/outputs_claude/predicted_vs_actual_comparison.png)
+![Improved Predicted vs Actual — Claude](../agents/claude/task_04/outputs/predicted_vs_actual_comparison.png)
 
 **Antigravity**
 ![Improved Predicted vs Actual — Antigravity](../agents/antigravity/task_04/outputs/plot_improved_actual_vs_predicted.png)
@@ -363,7 +446,7 @@ The per-borough residual breakdown shows Manhattan listings are most under-predi
 ![Improved Predicted vs Actual — Codex](../agents/codex/task_04_codex/output_04_codex/improved_predicted_vs_actual.png)
 
 ### Feature Importances (Claude — Random Forest)
-![RF Feature Importances — Claude](../agents/claude/task_04_claude/outputs_claude/rf_feature_importances.png)
+![RF Feature Importances — Claude](../agents/claude/task_04/outputs/rf_feature_importances.png)
 
 Top features: `neighbourhood_target_enc`, `room_type`, `geo_cluster`, `longitude`. The neighbourhood target encoding and geo-clustering (both new in Task 04) are the two most important features — confirming the EDA insight that spatial and location features dominate price prediction.
 
@@ -446,7 +529,21 @@ model_for_importance = best_model_name
 
 **Codex** — Diagnosed that baseline failure was the missing log transform and corrected it in Task 04 by switching to Random Forest (more robust to skewed targets without explicit transform).
 
-**Task 04 scores:** Claude 5/5 · Antigravity 4/5 (improvement report documents only successful strategy) · Codex 5/5
+### Task 04 — Agreements and disagreements
+
+**Agreed**
+- All moved from a linear baseline to a tree-based (or ensemble) model for Task 04; all reported improvement in RMSE/MAE/R² over their own baseline.
+- Preprocessing and encoders fitted on train only (Pipeline or equivalent); no test set used for feature or model decisions.
+- Multiple strategies were attempted (Claude: Ridge+FE vs RF+FE; Codex: RF vs GB; Antigravity: HistGradientBoosting + TargetEncoder).
+
+**Disagreed**
+- **Best model choice:** Claude and Codex chose Random Forest; Antigravity chose HistGradientBoostingRegressor. In this benchmark, RF (Claude 74.87, Codex 86.53) outperformed HGBR (Antigravity 106.07).
+- **Feature engineering:** Claude added explicit FE (target encoding, geo-cluster, interactions, log1p on numerics); Codex added FE with RF/GB; Antigravity relied on TargetEncoder + tree model without the same breadth of FE.
+- **Validation discipline:** Claude initially used validation set for LightGBM early stopping (caught and fixed); others did not use early stopping on the comparison set.
+
+### Task 04 — Takeaway
+
+Improvement is interpretable only when the baseline is valid: Codex’s “42.5% improvement” is mostly fixing the baseline. Random Forest plus rich feature engineering (target encoding, geo-clusters, interactions) gave the best RMSE here. When using early stopping or target-derived features, keep comparison validation strictly separate from any fitting or tuning.
 
 ---
 
@@ -694,7 +791,45 @@ Run after every agent task before committing outputs:
 
 ---
 
-## Appendix — All Scores
+## Appendix A — Per-task comparison matrix (dense)
+
+One-row-per-agent summary for quick cross-task comparison.
+
+**Task 01 — Ingestion**
+
+| Agent | Key artefact | Main strength | Main weakness |
+|-------|--------------|---------------|---------------|
+| Claude | schema_log.txt, missingness_report.csv, outlier_flags | Correct semantics (reviews_per_month=0) | .txt not .md; 0-row path bug |
+| Antigravity | schema_log.md, missingness_report, outlier_flags | Clean outputs; price=0 dropped, cap $1000 | First run absolute path |
+| Codex | schema_log.md, missingness CSV with justification column | Per-column handling + justification; dropped host_id | Path drift after rename |
+
+**Task 02 — EDA**
+
+| Agent | Plots | Cleaning | Main strength | Main weakness |
+|-------|-------|----------|---------------|---------------|
+| Claude | 9 | 99th % price; min_nights≤30 | Geo, pairplot, top neighbourhoods; FE plan for T04 | — |
+| Antigravity | 3 | $1000 cap; min_nights cap | Log-target + TargetEncoding suggestion | Fewer plots; aggressive cap |
+| Codex | 8 | 99.5th % price; min_nights≤365 | Borough×room heatmap, boxplot, quantiles | No explicit target-encoding recommendation |
+
+**Task 03 — Baseline**
+
+| Agent | Model | Target | RMSE | R² | Main strength | Main weakness |
+|-------|-------|--------|------|-----|---------------|---------------|
+| Claude | Ridge | log1p(price) | 83.32 | 0.549 | Only valid baseline; written justification for excluding neighbourhood | Output naming mismatch |
+| Antigravity | Ridge (TransformedTargetRegressor) | log1p(price) | 115.18 | 0.236 | Clean pipeline pattern | Weaker than Claude (cleaning + FE differ) |
+| Codex | LinearRegression | raw price | 150.58 | −0.625 | Pipeline structure correct | Baseline invalid; no log transform |
+
+**Task 04 — Improvement**
+
+| Agent | Best model | RMSE | vs baseline | Main strength | Main weakness |
+|-------|------------|------|-------------|---------------|---------------|
+| Claude | RF + FE | 74.87 | −10.1% | Two strategies (Ridge+FE, RF+FE); best RMSE; leakage caught | LightGBM val contamination; hardcoded importance plot |
+| Antigravity | HistGradientBoosting + TargetEncoder | 106.07 | −7.9% | TargetEncoder in Pipeline (no leakage) | Single strategy; no failed approaches documented |
+| Codex | RF + FE | 86.53 | −42.5%* | RF vs GB compared; clear recovery | *Improvement inflated by broken baseline |
+
+---
+
+## Appendix B — All Scores
 
 | agent_name | tool | task_id | score | time_mins | notes |
 |---|---|---|---|---|---|
