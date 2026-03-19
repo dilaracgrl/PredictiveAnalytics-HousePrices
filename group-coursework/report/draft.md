@@ -696,17 +696,17 @@ Run after every agent task before committing outputs:
 
 ## Appendix — All Scores
 
-| agent_name | tool | task_id | score | time_mins | notes |
-|---|---|---|---|---|---|
-| dilara | Claude | task_01_data_ingestion | 2 | 20 | schema_log.md missing; no per-column justification |
-| Caroline | Antigravity | task_01_data_ingestion | 5 | 15 | clean output with outlier flags |
-| moham | Codex | task_01_data_ingestion | 5 | 25 | task_01_complete |
-| dilara | Claude | task_02_eda | 5 | 30 | 9 plots, eda_summary with FE recommendations |
-| caroline | Antigravity | task_02_eda | 4 | 20 | 3 plots, notebook outputs not cleared |
-| moham | Codex | task_02_eda | 4 | 25 | task_02_codex_eval |
-| dilara | Claude | task_03_baseline_model | 4 | 35 | RMSE=83.32 R²=0.549; output naming mismatch |
-| caroline | Antigravity | task_03_baseline_model | 5 | 30 | RMSE=115.18 |
-| moham | Codex | task_03_baseline_model | 5 | 30 | RMSE=150.58 R²=−0.625 |
-| dilara | Claude | task_04_improving_performance | 5 | 45 | RF+FE RMSE=74.87 R²=0.485 |
-| caroline | Antigravity | task_04_improving_performance | 4 | 35 | RMSE=106.07; no failed approaches documented |
-| moham | Codex | task_04_improving_performance | 5 | 40 | RF RMSE=86.53 R²=0.463 |
+| tool | task_id | score | time_mins | notes |
+|---|---|---|---|---|
+| Claude | task_01_data_ingestion | 2 | 20 | schema_log.md missing; no per-column justification |
+| Antigravity | task_01_data_ingestion | 5 | 15 | clean output with outlier flags |
+| Codex | task_01_data_ingestion | 5 | 25 | task_01_complete |
+| Claude | task_02_eda | 5 | 30 | 9 plots, eda_summary with FE recommendations |
+| Antigravity | task_02_eda | 4 | 20 | 3 plots, notebook outputs not cleared |
+| Codex | task_02_eda | 4 | 25 | task_02_codex_eval |
+| Claude | task_03_baseline_model | 4 | 35 | RMSE=83.32 R²=0.549; output naming mismatch |
+| Antigravity | task_03_baseline_model | 5 | 30 | RMSE=115.18 |
+| Codex | task_03_baseline_model | 5 | 30 | RMSE=150.58 R²=−0.625 |
+| Claude | task_04_improving_performance | 5 | 45 | RF+FE RMSE=74.87 R²=0.485 |
+| Antigravity | task_04_improving_performance | 4 | 35 | RMSE=106.07; no failed approaches documented |
+| Codex | task_04_improving_performance | 5 | 40 | RF RMSE=86.53 R²=0.463 |
