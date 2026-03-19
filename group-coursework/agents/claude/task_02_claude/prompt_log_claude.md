@@ -3,35 +3,58 @@
 ## Iteration 1
 **Prompt:**
 ```
-Using outputs_claude/ingested.csv from task_01_claude, perform EDA on the
-training data only — do not create or reference a test split.
+You are helping with a data science coursework project.
+The dataset is the New York City Airbnb Open Data (2019).
+Your input: ../task_01/outputs/ingested.csv
+Project goal: predict Airbnb nightly listing price (regression on `price`).
 
-Produce at least 3 plots:
-1. Target variable (price) distribution — raw and log1p-transformed.
-2. A feature correlation heatmap (numeric features vs price).
-3. At least one plot showing a feature's relationship with price
-   (e.g. median price by room_type, or by neighbourhood_group).
+Your job is Task 02: EDA and Insight Generation.
+Work entirely inside this notebook. Save all outputs to outputs/.
 
-After each plot, write 2–3 sentences of interpretation in a markdown cell.
-Save each figure as a .png in outputs_claude/.
-Write a summary of key findings to outputs_claude/eda_summary.md —
-include which features are most predictive, any data quality issues found,
-and recommendations for preprocessing in Task 03.
-Save the cleaned dataset (outliers removed) as outputs_claude/eda_cleaned.csv.
-Use only relative paths. Clear all output cells before saving the notebook.
+SEED = 42
+
+--- WHAT YOU NEED TO DELIVER ---
+
+1. Understand the target variable
+   Explore the distribution of `price` thoroughly.
+   What does it look like? Is it well-behaved for modelling as-is?
+   What does this tell you about how it should be treated in Task 03?
+   Save your plots to outputs/ and write up your conclusions in markdown.
+
+2. Explore the features
+   Investigate the features available in the dataset.
+   Which ones look most promising for predicting price?
+   Are there patterns you would not have expected?
+   Are there features that look redundant or problematic?
+   This dataset has geographic coordinates, categorical location data,
+   and review/availability metrics — explore all of them.
+
+3. Understand relationships between features and price
+   Go beyond correlation coefficients.
+   What does the relationship between location and price actually look like?
+   How does room type interact with neighbourhood?
+   Are there subgroups in the data that behave very differently?
+
+4. Make decisions about remaining data quality issues
+   Your EDA may reveal further outliers or anomalies not caught in Task 01.
+   Decide what to do with them and justify each decision in markdown.
+   Save the final analysis-ready dataset to outputs/eda_cleaned.csv
+
+5. Summarise your findings
+   Write an EDA Summary section at the end of the notebook.
+   This should answer: what are the most important features?
+   What preprocessing does the target variable need?
+   What feature engineering ideas does this data suggest for Task 04?
+   Save this summary to outputs/eda_summary.md —
+   it will be referenced in Tasks 03 and 04.
+
+--- CONSTRAINTS (non-negotiable) ---
+
+- Read from ingested.csv only — do not reload the raw file
+- Do NOT create a train/test split in this notebook
+- Do NOT use any held-out data
+- Every plot must have a title, labelled axes, and a markdown interpretation cell
+- Save all outputs to outputs/ using relative paths only
 ```
 **What happened:**
-The agent produced 9 plots covering price distribution (raw and log), correlation heatmap, median price by borough, by room type, geographic scatter, neighbourhood rankings, pairplot, and categorical counts. Each plot had accompanying markdown interpretation. `eda_summary.md` was produced with clear recommendations including log1p transform, target encoding for `neighbourhood`, and geo-clustering for Task 04. `eda_cleaned.csv` was saved with price capped at the 99th percentile and `minimum_nights` clipped at 30. No test split was created. Notebook passed all checks — scored 5/5.
-
----
-
-## Iteration 2
-**Prompt:**
-```
-The eda_summary.md looks good but please add a section specifically recommending
-feature engineering steps for Task 04 — include neighbourhood target encoding,
-geo-cluster features from lat/lon, interaction terms, and log transforms for
-skewed numeric features. This will serve as the plan for Task 04.
-```
-**What happened:**
-The agent appended a "Feature Engineering Recommendations for Task 04" section to `eda_summary.md` listing 5 specific engineering steps with justification. This section was later used directly as the implementation plan in Task 04.
+The agent produced 9 plots: price distribution (raw and log1p), correlation heatmap, median price by borough, by room type, geographic scatter, neighbourhood price rankings, pairplot, and categorical counts. Each plot had an accompanying markdown interpretation cell. `eda_summary.md` was produced with key findings including the log1p transform recommendation, feature importance rankings, and a "Feature Engineering Recommendations for Task 04" section covering neighbourhood target encoding, geo-clustering, interaction terms, and log transforms on skewed numerics. `eda_cleaned.csv` was saved with price capped at the 99th percentile and `minimum_nights` clipped at 30. No test split was created. Scored 5/5.

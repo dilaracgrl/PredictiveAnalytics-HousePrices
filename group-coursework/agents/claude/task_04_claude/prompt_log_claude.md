@@ -3,34 +3,72 @@
 ## Iteration 1
 **Prompt:**
 ```
-Starting from the baseline in task_03_claude (Ridge on log1p(price),
-RMSE=83.32), improve model performance.
+You are helping with a data science coursework project.
+The dataset is the New York City Airbnb Open Data (2019).
 
-Try at least two strategies:
-Strategy A: Ridge + feature engineering (isolates the feature impact).
-Strategy B: Random Forest + feature engineering (combined improvement).
+Your inputs:
+  Dataset:          ../task_02/outputs/eda_cleaned.csv
+  Baseline results: ../task_03/outputs/baseline_results.csv
+  Baseline model:   ../task_03/outputs/baseline_model.pkl
+  EDA findings:     ../task_02/outputs/eda_summary.md
 
-Feature engineering to include (all fitted on train only to prevent leakage):
-- neighbourhood_target_enc: mean log1p(price) per neighbourhood, computed on
-  train set only.
-- geo_cluster: k-means (k=20) on latitude/longitude, fitted on train only.
-- log1p transforms on minimum_nights, number_of_reviews,
-  calculated_host_listings_count.
-- Interaction feature: room_type + neighbourhood_group as a combined string.
-- Binary flags: has_reviews (number_of_reviews > 0), is_professional_host
-  (calculated_host_listings_count > 1).
+Project goal: predict Airbnb nightly listing price (regression on `price`).
 
-Show baseline vs improved metrics side by side in outputs_claude/improved_results.csv
-with columns: model, RMSE_USD, MAE_USD, R2_log, R2_raw.
-Save the best model as outputs_claude/improved_pipeline_rf.pkl.
-Write outputs_claude/improvement_reasoning.md justifying the approach and
-confirming no leakage was introduced.
-Use SEED = 42. Relative paths only.
+Your job is Task 04: Improving Performance.
+Work entirely inside this notebook. Save all outputs to outputs/.
+
+SEED = 42
+
+--- WHAT YOU NEED TO DELIVER ---
+
+1. Diagnose the baseline before attempting to improve it
+   Load and display the baseline results.
+   What are its weaknesses? Where does it fail?
+   Look at the residuals and predictions from Task 03 — what patterns do you see?
+   Write a clear diagnosis in markdown before touching any code.
+
+2. Reason about your improvement strategy BEFORE implementing anything
+   Based on your EDA summary and baseline diagnosis, what is most likely to help?
+   This dataset has features the baseline may not have used well —
+   categorical variables, geographic information, review patterns.
+   What strategies are available to you?
+   Rank them by expected impact and justify your ranking.
+   What are the risks of each approach?
+   Save this reasoning to outputs/improvement_reasoning.md
+   This is the most important output for the group report —
+   different agents will reason differently about the same problem.
+
+3. Implement at least two improvement strategies
+   Apply the strategies you reasoned your way to.
+   You are free to choose any combination of:
+     - Feature engineering
+     - Categorical encoding
+     - Handling geographic information
+     - Hyperparameter tuning
+     - A different model entirely
+   There is no prescribed answer — your choices should follow from your reasoning.
+
+4. Evaluate and compare honestly
+   Use the same metrics as Task 03 so results are directly comparable.
+   Show the baseline result alongside your improved result.
+   If something did not help, say so and analyse why.
+   Honest failure analysis is more valuable for the coursework than
+   a result that looks good but is not explained.
+   Save a comparison to outputs/improved_results.csv and produce a comparison chart.
+
+--- CONSTRAINTS (non-negotiable) ---
+
+- The test set must not influence any training, tuning, or feature decisions
+- Any feature derived from the target variable must be computed on train data only
+- You MUST show the baseline result alongside your improved result
+- Do NOT use any data source other than eda_cleaned.csv
+- Document every decision in a markdown cell
+- Save all outputs to outputs/ using relative paths only
 ```
 **What happened:**
-The agent implemented both strategies. Strategy A (Ridge + FE): RMSE 80.09, R²=0.410. Strategy B (RF + FE): RMSE 74.87, R²=0.485. Both beat the baseline (83.32). RF was selected as best. The neighbourhood target encoder and geo-clustering were correctly fitted inside the training pipeline on `X_train` only.
+The agent diagnosed four baseline weaknesses in markdown (heteroscedasticity, lost neighbourhood granularity, no interaction terms, skewed numerics). It then ranked improvement strategies by expected impact and implemented two: Strategy A (Ridge + feature engineering) and Strategy B (Random Forest + feature engineering). Feature engineering included neighbourhood target encoding, geo-clustering (k-means k=20), log1p transforms on skewed numerics, room_type × borough interaction, and binary flags — all fitted on `X_train` only. Strategy A: RMSE 80.09. Strategy B (RF): RMSE 74.87, R²=0.485. RF selected as best model.
 
-However, reviewing the training code, I noticed LightGBM was also tested in an earlier draft with `eval_set=[(X_val, y_val)]` for early stopping — this gave LightGBM an information advantage over the other models. I flagged this before it was included in the final outputs (see Iteration 2).
+However, reviewing the code I noticed LightGBM was also tested with `eval_set=[(X_val, y_val)]` for early stopping — this leaked validation labels into LightGBM's training procedure, giving it an unfair advantage over Ridge and RF. Flagged and fixed before finalising outputs (see Iteration 2).
 
 ---
 
