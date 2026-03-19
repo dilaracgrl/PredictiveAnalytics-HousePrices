@@ -4,18 +4,6 @@ Comparing **Claude**, **Codex**, and **Antigravity** on four pipeline tasks usin
 
 ---
 
-## Team Tool Mapping
-
-
-| Team member         | Agent folder          | Tool               |
-| ------------------- | --------------------- | ------------------ |
-| *Dilara*            | `agents/claude/`      | Claude (claude.ai) |
-| *Muriel, Armaan*    | `agents/codex/`       | Codex (ChatGPT)    |
-| *Rachana, Caroline* | `agents/antigravity/` | Antigravity        |
-
-
----
-
 ## Folder Structure
 
 ```
