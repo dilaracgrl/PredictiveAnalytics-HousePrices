@@ -712,6 +712,45 @@ After the fix, Random Forest still outperformed LightGBM (RMSE 74.87 vs ~77), co
 | Test set used for feature decisions | ✓ None | ✓ None | ✓ None | Cell order in each notebook |
 | EDA on test data | ✓ None | ✓ None | ✓ None | No train/test split in Task 02 |
 
+### Leakage as a scored benchmark dimension
+
+Most group benchmarks compare only RMSE. We went further: leakage prevention was turned into a **formal, programmatic metric** scored alongside task performance.
+
+**Script:** [`group-coursework/tasks/leakage_check.py`](../tasks/leakage_check.py)
+
+The script parses each agent's Task 03 and Task 04 notebooks as JSON and applies five binary checks — each worth 1 point:
+
+| Criterion | What is checked |
+|---|---|
+| **L1** — split present | `train_test_split`, saved index arrays, or `split_meta.pkl` found in notebook |
+| **L2** — split before fit | First `.fit()` call appears in a later cell (or lower line) than the split |
+| **L3** — Pipeline used | `sklearn.Pipeline` / `ColumnTransformer` wraps all preprocessing steps |
+| **L4** — no fit on full X | No `.fit(X` or `.fit_transform(X` on the un-split dataset detected |
+| **L5** — target encoding safe | Either sklearn `TargetEncoder` (cross-validated by design) or train-only `groupby` |
+
+**Results — all six notebooks scored 5/5:**
+
+| Agent | Tool | Task | L1 | L2 | L3 | L4 | L5 | Score |
+|---|---|---|---|---|---|---|---|---|
+| dilara | Claude | Task 03 | ✓ | ✓ | ✓ | ✓ | N/A ✓ | **5/5** |
+| dilara | Claude | Task 04 | ✓ | ✓ | ✓ | ✓ | ✓ train-only groupby | **5/5** |
+| caroline | Antigravity | Task 03 | ✓ | ✓ | ✓ | ✓ | N/A ✓ | **5/5** |
+| caroline | Antigravity | Task 04 | ✓ | ✓ | ✓ | ✓ | ✓ sklearn TargetEncoder | **5/5** |
+| moham | Codex | Task 03 | ✓ | ✓ | ✓ | ✓ | N/A ✓ | **5/5** |
+| moham | Codex | Task 04 | ✓ | ✓ | ✓ | ✓ | N/A ✓ | **5/5** |
+
+**Mean leakage score: 5.00 / 5. All agents passed all criteria.**
+
+The 5/5 result is itself a finding: all three LLM tools have internalised scikit-learn best practices around Pipelines and train-only fitting. The nuanced difference lies in *how* target encoding leakage is handled:
+
+- **Antigravity** used sklearn's `TargetEncoder` — the most robust approach, because cross-validation smoothing is built into the transformer itself, making it impossible to accidentally leak even within a single training fold.
+- **Claude** used a manual `df_train.groupby('neighbourhood')['log_price'].mean()` — correct, but requires the developer to be disciplined about variable scope. One mistyped `df` instead of `df_train` would cause silent leakage.
+- **Codex** avoided neighbourhood encoding entirely at Task 04 — no leakage risk, but also forfeited the signal.
+
+The one real leakage event in the project — Claude's LightGBM `eval_set` contamination — was caught by human review and fixed in Iteration 2, not by any automated check. This confirms that programmatic checks are necessary but not sufficient: subtle validation-set contamination requires reading the training loop, not just checking cell order.
+
+---
+
 ## Performance Summary
 
 ### RMSE across all tasks
