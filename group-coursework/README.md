@@ -60,23 +60,38 @@ group-coursework/
 
 ---
 
+## Requirements
+
+- **Python 3.9 or later** — type hints in `evaluate.py` and `leakage_check.py` use built-in generics (`list[str]`, `tuple[bool, str]`) which require 3.9+.
+- No GPU required. All models run on CPU.
+
+---
+
 ## Quickstart
 
 ### 1. Clone and install
 
 ```bash
 git clone <repo-url>
-cd group-coursework
-python -m venv .venv
+cd PredictiveAnalytics-HousePrices-1/group-coursework
+python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Place the raw dataset
+### 2. Dataset
 
+The raw dataset (`data/raw/AB_NYC_2019.csv`) is already committed to the repository — no download needed after cloning.
+
+If you need to obtain it independently (e.g. for a fresh copy):
 ```bash
-# Download via Kaggle API or copy manually — then never touch it again
-cp /path/to/dataset.csv data/raw/
+# Option A — Kaggle CLI
+kaggle datasets download -d dgomonov/new-york-city-airbnb-open-data --unzip
+mv AB_NYC_2019.csv data/raw/
+
+# Option B — manual download
+# https://www.kaggle.com/datasets/dgomonov/new-york-city-airbnb-open-data
+# Save the CSV to data/raw/AB_NYC_2019.csv
 ```
 
 ### 3. Create your branch
@@ -145,3 +160,14 @@ Each task is worth 5 points. `evaluate.py` runs automated checks then prompts fo
 
 
 Max total per agent: **20 points**.
+
+### Leakage benchmark
+
+An additional programmatic leakage check runs across all Task 03 and 04 notebooks:
+
+```bash
+# From group-coursework/
+python tasks/leakage_check.py batch
+```
+
+Scores 5 criteria per notebook (Pipeline usage, split-before-fit ordering, no fit on full X, safe target encoding) and appends results to `results/scores.csv` with `task_id = leakage_check_task_0{3,4}`.
