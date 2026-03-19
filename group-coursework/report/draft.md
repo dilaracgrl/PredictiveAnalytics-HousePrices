@@ -377,6 +377,171 @@ model_for_importance = best_model_name
 
 ---
 
+## Models Built and Leakage Prevention
+
+### What each agent built across Tasks 03 and 04
+
+#### Claude
+
+**Task 03 — Ridge Regression on log1p(price)**
+
+Ridge was chosen as the baseline because one-hot encoding `room_type` and `neighbourhood_group` produces mild multicollinearity; Ridge's L2 regularisation stabilises coefficients without discarding features. Plain OLS was rejected explicitly. `neighbourhood` (221 levels) was excluded at baseline and reintroduced in Task 04 via target encoding.
+
+```
+Input features (Task 03):
+  Categorical (one-hot): room_type, neighbourhood_group
+  Numeric (StandardScaler): latitude, longitude, minimum_nights,
+    number_of_reviews, reviews_per_month,
+    calculated_host_listings_count, availability_365
+Target: log1p(price) → predictions back-transformed with expm1()
+```
+
+**Task 04 — Two strategies compared:**
+
+*Strategy A — Ridge + Feature Engineering* (isolates feature impact from model impact)
+*Strategy B — Random Forest + Feature Engineering* (combined improvement)
+
+New features added (all fitted on X_train only):
+
+| Feature | How built | Leakage risk | How we prevented it |
+|---|---|---|---|
+| `neighbourhood_target_enc` | Mean log1p(price) per neighbourhood | Target encoded on train → applied to test | Computed on X_train only, never using any test rows |
+| `geo_cluster` | k-means (k=20) on lat/lon | Cluster centres could be fit on all data | `KMeans.fit()` called on X_train only; test rows assigned via `predict()` |
+| `log1p(minimum_nights)` | log transform | None | Stateless transform |
+| `log1p(number_of_reviews)` | log transform | None | Stateless transform |
+| `room_type × neighbourhood_group` | String concatenation | None | Stateless transform |
+| `has_reviews` | `number_of_reviews > 0` | None | Stateless transform |
+| `is_professional_host` | `calculated_host_listings_count > 1` | None | Stateless transform |
+
+---
+
+#### Antigravity
+
+**Task 03 — Ridge via TransformedTargetRegressor**
+
+Wrapping the log transform in `TransformedTargetRegressor(func=np.log1p, inverse_func=np.expm1)` is a clean pattern: the pipeline handles the inverse transform automatically when calling `.predict()`, removing the risk of forgetting to call `expm1()` on predictions.
+
+**Task 04 — HistGradientBoostingRegressor + TargetEncoder**
+
+`HistGradientBoostingRegressor` was chosen because it handles high-cardinality categoricals and non-linear spatial interactions natively without explicit feature engineering. The key methodological decision was using scikit-learn's `TargetEncoder` for `neighbourhood`.
+
+**Why TargetEncoder is a leakage risk if used naively:**
+A naive target encoding computes the mean price per neighbourhood on the full training set. Each training row's own price then contributes to the encoding of its own neighbourhood — this is a form of target leakage that inflates in-sample performance.
+
+**How Antigravity prevented it:**
+Sklearn's `TargetEncoder` uses cross-validation smoothing internally: when fitting, each fold's neighbourhood encoding is computed from out-of-fold rows only. By placing `TargetEncoder` inside the Pipeline, this happens correctly on every train fold.
+
+```python
+# Correct — TargetEncoder inside Pipeline.fit() uses CV smoothing automatically
+preprocessor = ColumnTransformer([
+    ('target_enc', TargetEncoder(), ['neighbourhood']),
+    ('ohe', OneHotEncoder(handle_unknown='ignore'),
+           ['room_type', 'neighbourhood_group']),
+    ('num', StandardScaler(), numeric_features)
+])
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('model', TransformedTargetRegressor(
+        regressor=HistGradientBoostingRegressor(random_state=42),
+        func=np.log1p, inverse_func=np.expm1
+    ))
+])
+pipeline.fit(X_train, y_train)  # TargetEncoder CV smoothing happens here
+```
+
+---
+
+#### Codex
+
+**Task 03 — LinearRegression (no log transform)**
+
+`price` was used as the raw target. This caused the squared-error loss to be dominated by extreme-price listings (some above $500), preventing the model from learning to predict typical listings. Result: R² = −0.625.
+
+**Task 04 — Random Forest and GradientBoostingRegressor (two compared)**
+
+Switching to Random Forest bypassed the log-transform requirement because tree-based models split on rank order, not magnitude — extreme values influence splits but do not dominate the loss function the same way. Both strategies used feature engineering and a scikit-learn Pipeline.
+
+| Strategy | RMSE | R² |
+|---|---|---|
+| Gradient Boosting + FE | 89.07 | 0.431 |
+| Random Forest + FE | **86.53** | **0.463** |
+
+Random Forest was selected. The improvement over Task 03 (RMSE 150.58 → 86.53) is large but partly reflects recovery from the broken baseline rather than a genuine advancement.
+
+---
+
+### Train / Test Split — all agents
+
+All three agents used an 80/20 stratified split with `SEED = 42`. This was enforced in the task prompt and verified in each agent's report file.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+```
+
+The test set was used only once — for final metric reporting. No agent used test-set information for feature selection, hyperparameter tuning, or preprocessing decisions (verified by reading each notebook's cell order).
+
+---
+
+### How we checked for data leakage
+
+Leakage can enter a DS pipeline at three points. We checked each one.
+
+**1. Preprocessing leakage (scaler / encoder fitted before split)**
+
+All three agents used scikit-learn Pipelines, which guarantee that `.fit()` is called only on training data when used correctly. We verified this by checking that `pipeline.fit(X_train, y_train)` was the first fit call in each notebook — there was no call to `scaler.fit(X)` on the full dataset before the split.
+
+| Check | Claude | Antigravity | Codex |
+|---|---|---|---|
+| Scaler fitted on X_train only | ✓ | ✓ | ✓ (Task 04 only — Task 03 had no scaler leakage but also no log transform) |
+| Encoder fitted on X_train only | ✓ | ✓ | ✓ |
+| No `.fit()` before `train_test_split` | ✓ | ✓ | ✓ |
+
+**2. Target encoding leakage**
+
+Target encoding (encoding a categorical by the mean of the target) leaks target information if computed on the full dataset before splitting, or if a row's own target value contributes to its own encoding.
+
+- **Claude** computed neighbourhood mean prices on `X_train` only, then applied `.transform()` to `X_test` using those train-derived means. Verified by reading the `FunctionTransformer` in the pipeline.
+- **Antigravity** used sklearn's `TargetEncoder` inside the Pipeline — CV smoothing prevents each row contributing to its own encoding. Verified by checking that `TargetEncoder` appeared inside `ColumnTransformer` inside `Pipeline.fit()`.
+- **Codex** did not use target encoding in Task 04 — no leakage risk from this source.
+
+**3. Validation contamination (early stopping)**
+
+This is the hardest leakage to detect because it does not raise an error and produces plausible results.
+
+Claude's first draft of Task 04 included LightGBM with:
+```python
+# WRONG — X_val/y_val are the comparison validation set
+lgbm.fit(X_train, y_train, eval_set=[(X_val, y_val)])
+```
+
+LightGBM uses the `eval_set` to decide when to stop adding trees. If `X_val` is the same set used for final metric comparison, LightGBM has seen validation labels during training while Ridge and RF have not — an unfair advantage that inflates LightGBM's apparent performance.
+
+**Fix applied (Iteration 2):**
+```python
+# CORRECT — separate internal split from X_train for early stopping
+X_tr, X_inner_val, y_tr, y_inner_val = train_test_split(
+    X_train, y_train, test_size=0.1, random_state=42
+)
+lgbm.fit(X_tr, y_tr, eval_set=[(X_inner_val, y_inner_val)])
+# X_val remains completely untouched until final comparison
+```
+
+After the fix, Random Forest still outperformed LightGBM (RMSE 74.87 vs ~77), confirming the original ranking was correct despite the contamination being removed.
+
+---
+
+### Summary — leakage prevention measures
+
+| Leakage type | Claude | Antigravity | Codex | Verified how |
+|---|---|---|---|---|
+| Preprocessing before split | ✓ None | ✓ None | ✓ None | Cell order in each notebook |
+| Target encoding on full dataset | ✓ Train-only | ✓ Pipeline CV smoothing | N/A | Code review of fit calls |
+| Early stopping on comparison val set | ✓ Fixed (Iter 2) | N/A | N/A | Manual code review |
+| Test set used for feature decisions | ✓ None | ✓ None | ✓ None | Cell order in each notebook |
+| EDA on test data | ✓ None | ✓ None | ✓ None | No train/test split in Task 02 |
+
 ## Performance Summary
 
 ### RMSE across all tasks
