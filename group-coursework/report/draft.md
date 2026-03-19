@@ -155,6 +155,56 @@ The Borough × Room Type interaction (Manhattan + Entire home/apt = highest pric
 
 ---
 
+### Price by Room Type
+
+**Claude**
+![Price by Room Type — Claude](../agents/claude/task_02_claude/outputs_claude/price_by_room_type.png)
+
+**Codex**
+![Price by Room Type — Codex](../agents/codex/task_02_codex/output_02_codex/price_by_room_type.png)
+
+Entire home/apt listings are consistently the highest-priced room type across all boroughs. Shared rooms cluster at the lower end. This categorical split is the single strongest predictor in the dataset and motivates including `room_type` as a primary feature in every model.
+
+---
+
+### Price by Borough
+
+**Claude**
+![Median Price by Borough — Claude](../agents/claude/task_02_claude/outputs_claude/median_price_by_borough.png)
+
+**Codex**
+![Price by Borough — Codex](../agents/codex/task_02_codex/output_02_codex/price_by_borough.png)
+
+Manhattan dominates. Brooklyn is a distant second. Bronx and Staten Island are at the lower end. This ordering is consistent across Claude and Codex and explains why `neighbourhood_group` is a core feature in both baselines.
+
+---
+
+### Price Distribution — Log Scale
+
+**Codex — Log-transformed price**
+![Log Price Distribution — Codex](../agents/codex/task_02_codex/output_02_codex/price_distribution_log_hist.png)
+
+**Codex — Price boxplot**
+![Price Boxplot — Codex](../agents/codex/task_02_codex/output_02_codex/price_boxplot.png)
+
+The log-transformed distribution is approximately normal — confirming why `log1p(price)` is the correct regression target. The boxplot clearly shows the extreme upper tail that distorts any model trained on raw price.
+
+---
+
+### Numeric Feature Distributions (Claude)
+![Numeric Distributions — Claude](../agents/claude/task_02_claude/outputs_claude/numeric_distributions.png)
+
+`minimum_nights`, `number_of_reviews`, and `calculated_host_listings_count` are all right-skewed — the same pattern as `price`. This motivates the log1p transforms applied to these features in Claude's Task 04 feature engineering.
+
+---
+
+### Top Neighbourhoods by Price (Claude)
+![Top Neighbourhoods — Claude](../agents/claude/task_02_claude/outputs_claude/top_neighbourhoods_price.png)
+
+Fort Wadsworth, Tribeca, and Sea Gate are the highest-median-price neighbourhoods. This plot is why `neighbourhood` (221 levels, excluded from the baseline) is worth reintroducing via target encoding in Task 04 — within-borough neighbourhood variation is large and predictively valuable.
+
+---
+
 ### EDA Summary — Key findings compared
 
 | Finding | Claude | Antigravity | Codex |
@@ -213,6 +263,13 @@ Claude and Antigravity show the characteristic funnel shape of a model that fits
 ![Residuals — Codex](../agents/codex/task_03_codex/output_03_codex/residuals_plot.png)
 
 Claude's residuals show heteroscedasticity (increasing variance at high predicted prices) — correctly diagnosed in the Task 04 improvement plan. Antigravity shows a similar pattern. Codex's residuals have no systematic structure because the model failed to learn any meaningful signal.
+
+### Model Coefficients (Claude — Ridge)
+![Model Coefficients — Claude](../agents/claude/task_03_claude/outputs_claude/model_coefficients.png)
+
+The coefficient plot confirms the EDA findings: `room_type_Entire home/apt` and `neighbourhood_group_Manhattan` carry the largest positive weights. Geographic coordinates (`latitude`, `longitude`) contribute meaningful signal even in the linear model.
+
+---
 
 ### Code comparison — what each agent built
 
@@ -277,6 +334,15 @@ Diagnose the baseline weaknesses, implement ≥2 improvement strategies, compare
 
 *\*Codex's 42.5% improvement is recovery from a broken baseline, not genuine advancement. Starting from a comparable baseline (83.32), Codex's final 86.53 is still worse than Claude's baseline.*
 
+### Baseline Diagnosis (Claude — before improvement)
+![Baseline Diagnosis — Claude](../agents/claude/task_04_claude/outputs_claude/baseline_diagnosis.png)
+
+![Baseline Residuals by Borough — Claude](../agents/claude/task_04_claude/outputs_claude/baseline_residuals_by_borough.png)
+
+The per-borough residual breakdown shows Manhattan listings are most under-predicted — the baseline model's borough-level one-hot encoding misses the within-borough price variation driven by specific neighbourhoods and lat/lon clusters. This directly motivates the neighbourhood target encoding and geo-clustering added in Task 04.
+
+---
+
 ### Model comparison charts
 
 **Claude — Strategy comparison**
@@ -300,6 +366,13 @@ Diagnose the baseline weaknesses, implement ≥2 improvement strategies, compare
 ![RF Feature Importances — Claude](../agents/claude/task_04_claude/outputs_claude/rf_feature_importances.png)
 
 Top features: `neighbourhood_target_enc`, `room_type`, `geo_cluster`, `longitude`. The neighbourhood target encoding and geo-clustering (both new in Task 04) are the two most important features — confirming the EDA insight that spatial and location features dominate price prediction.
+
+### Improved Residuals (Codex)
+![Improved Residuals — Codex](../agents/codex/task_04_codex/output_04_codex/improved_residuals_plot.png)
+
+Codex's Task 04 residuals show a much tighter spread than its Task 03 residuals (which were near-random scatter due to R²=−0.625). The residual pattern now resembles Claude and Antigravity's Task 03 baselines — confirming that the model switch fixed the fundamental issue.
+
+---
 
 ### Improvement strategies compared
 
