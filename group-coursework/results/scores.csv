@@ -12,3 +12,9 @@ moham,Codex,task_04_improving_performance,5,40.0,task_04_codex_eval,none
 moham,Codex,task_03_baseline_model,5,30.0,task_03_codex_eval,none
 dilara,Claude (claude.ai),task_03_baseline_model,4,35.0,Ridge on log1p(price); RMSE=83.32 MAE=47.95 R2=0.549; report saved as model_selection_reasoning.md not baseline_report.md; model as baseline_pipeline.pkl not model.pkl,output_file_naming
 dilara,Claude (claude.ai),task_04_improving_performance,5,45.0,RF+FE best: RMSE=74.87 MAE=42.59 R2=0.485; neighbourhood target encoding + geo-clustering + interactions; no leakage; two strategies compared,none
+dilara,Claude (claude.ai),leakage_check_task_03,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none
+dilara,Claude (claude.ai),leakage_check_task_04,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none
+caroline,Antigravity,leakage_check_task_03,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none
+caroline,Antigravity,leakage_check_task_04,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none
+moham,Codex,leakage_check_task_03,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none
+moham,Codex,leakage_check_task_04,5,0,score=5/5 | L1_split_present=✓ | L2_split_before_fit=✓ | L3_pipeline_used=✓ | L4_no_fit_on_full_X=✓ | L5_target_enc_safe=✓,none

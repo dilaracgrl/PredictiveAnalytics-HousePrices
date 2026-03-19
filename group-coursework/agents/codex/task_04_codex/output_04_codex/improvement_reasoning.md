@@ -1,18 +1,13 @@
-﻿# Improvement Reasoning (Task 04)
+# Improvement Reasoning (Task 04)
 
 ## Baseline diagnosis
 - Baseline RMSE=150.5786, MAE=106.2309, R2=-0.6251.
-- Negative R2 indicates severe underfitting for this price regression problem.
+- Negative R2 indicates severe underfitting for this regression problem.
 
 ## Ranked strategies
-1. Non-linear ensemble model to capture interaction and non-linear effects.
-2. Target-independent feature engineering (`log_minimum_nights`, `review_intensity`, `availability_rate`, `lat_lon_interaction`).
-3. Drop high-cardinality text/ID fields (`id`, `name`, `host_name`) to improve stability.
-
-## Risks
-- Gradient boosting can overfit noisy tails.
-- Random forest may smooth extreme price variation.
-- Engineered features may add weak/noisy signal.
+1. Non-linear ensemble model (Gradient Boosting / Random Forest).
+2. Target-independent feature engineering.
+3. Remove high-cardinality text/ID fields.
 
 ## Leakage control
 - One train/test split with SEED=42.
@@ -24,17 +19,23 @@
 
 ## Target Variable: `price`
 - `price` is strongly right-skewed (skewness = 19.12) with a long tail.
-- Key quantiles: 95th=355.0, 99th=799.0, 99.5th=1000.0; max remains very high in raw ingested data.
-- For Task 03 modelling, consider robust handling of the target (for example log-transform during model training pipeline) and metrics less sensitive to extreme values.
+- Key quantiles: 95th=355.0, 99th=799.0, 99.5th=1000.0.
+- For Task 03, consider robust handling of the target (for example log-transform during training pipeline) and robust metrics.
 
 ## Most Important Feature Signals
-- `room_type` is a major signal with clear median-price separation.
-- `neighbourhood_group` also separates price levels, and interaction with `room_type` is strong.
-- Geographic coordinates (`latitude`, `longitude`) show clear spatial price structure.
-- Review and availability features have weaker linear correlation but may still add non-linear predictive value.
+- `room_type` and `neighbourhood_group` are strong price separators.
+- Coordinates (`latitude`, `longitude`) show clear spatial structure.
+- Interaction effects (borough x room type) appear important.
 
-## Relationships and Subgroups
-- Manhattan + Entire home/apt forms the highest-price subgroup.
-- Shared/private room listings are consistently lower-price, but spread varies by borough.
-- Spatial scatter s
+## Feature Engineering Ideas for Task 04
+- Borough x room_type interactions
+- Spatial features from latitude/longitude
+- Robust treatment of heavy-tailed numeric variables
 
+## Top Correlations With Price (absolute)
+longitude                        -0.258762
+calculated_host_listings_count    0.130687
+availability_365                  0.117916
+latitude                          0.062962
+number_of_reviews                -0.057829
+reviews_per_month        

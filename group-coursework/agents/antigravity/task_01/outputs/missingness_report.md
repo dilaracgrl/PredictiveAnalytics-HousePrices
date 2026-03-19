@@ -2,8 +2,8 @@
 
 |                   |   missing_count |   missing_pct |
 |:------------------|----------------:|--------------:|
-| reviews_per_month |           10052 |         20.56 |
 | last_review       |           10052 |         20.56 |
+| reviews_per_month |           10052 |         20.56 |
 | host_name         |              21 |          0.04 |
 | name              |              16 |          0.03 |
 

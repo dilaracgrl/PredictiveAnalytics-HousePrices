@@ -1,4 +1,4 @@
 metric_name,baseline_value,improved_value,delta_pct
-RMSE,115.18,106.07,-7.91
-MAE,56.34,50.59,-10.21
-R-squared,0.236,0.3521,11.61
+RMSE,115.18,105.98,-7.99
+MAE,56.34,50.63,-10.13
+R-squared,0.236,0.3532,11.72

@@ -1,7 +1,12 @@
+# Requires Python >= 3.9
+# (type hints like tuple[bool, str] and list[str] are built-in generics in 3.9+)
+#
+# Install: pip install -r requirements.txt
+
 # Core data science
 pandas>=2.0.0
 numpy>=1.24.0
-scikit-learn>=1.3.0
+scikit-learn>=1.3.0   # 1.3+ required: TargetEncoder, OneHotEncoder(sparse_output=False)
 scipy>=1.11.0
 
 # Visualisation
@@ -12,6 +17,3 @@ seaborn>=0.12.0
 jupyter>=1.0.0
 ipykernel>=6.0.0
 nbformat>=5.9.0
-
-# Utilities
-pathlib2>=2.3.7  # backport (not needed for Python 3.4+, but harmless)

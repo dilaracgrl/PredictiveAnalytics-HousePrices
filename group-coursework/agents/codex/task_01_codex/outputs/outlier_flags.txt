@@ -1,0 +1,19 @@
+Outlier and Suspicious Value Flags
+
+- price: IQR bounds=(-90.000, 334.000), outlier_count=2972, p99=799.000
+- minimum_nights: IQR bounds=(-5.000, 11.000), outlier_count=6607, p99=45.000
+- number_of_reviews: IQR bounds=(-33.500, 58.500), outlier_count=6021, p99=214.000
+- reviews_per_month: IQR bounds=(-2.555, 4.765), outlier_count=1793, p99=7.196
+- calculated_host_listings_count: IQR bounds=(-0.500, 3.500), outlier_count=7081, p99=232.000
+- availability_365: IQR bounds=(-340.500, 567.500), outlier_count=0, p99=365.000
+
+- Suspicious rule check: price <= 0 count = 11
+- Suspicious rule check: minimum_nights <= 0 count = 0
+
+Cleaning decisions
+- Drop host_id (identifier) and last_review (sparse date feature).
+- Remove rows where price <= 0 as invalid target values.
+- Fill name/host_name missing values with 'Unknown'.
+- Fill reviews_per_month missing values with 0 (no reviews).
+- Clip minimum_nights above 99th percentile to reduce leverage of extreme values.
+- Keep high price outliers for now because price is the target and should not be transformed in Task 01.
